@@ -1,16 +1,10 @@
-// Registra os aliases antes de qualquer import
-require('./register-aliases');
-
-import app from '@/app';
-import { env } from '@/config/env';
-import { logger } from '@/config/logger';
-import { prisma } from '@/config/database';
+import app from './app';
+import { env } from './config/env';
+import { logger } from './config/logger';
 
 const startServer = async () => {
   try {
-    // Test database connection
-    await prisma.$connect();
-    logger.info('Database connected successfully');
+    logger.info('Starting server...');
 
     // Start server
     const server = app.listen(env.PORT, () => {
@@ -31,7 +25,6 @@ const startServer = async () => {
       logger.info('SIGTERM received, shutting down gracefully');
       server.close(() => {
         logger.info('Server closed');
-        prisma.$disconnect();
         process.exit(0);
       });
     });
@@ -40,7 +33,6 @@ const startServer = async () => {
       logger.info('SIGINT received, shutting down gracefully');
       server.close(() => {
         logger.info('Server closed');
-        prisma.$disconnect();
         process.exit(0);
       });
     });
