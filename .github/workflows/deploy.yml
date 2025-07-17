@@ -20,12 +20,31 @@ jobs:
         id: get_port
         run: |
           APP_PORT=$(sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@82.25.69.57 '
-            USED_PORTS=$(netstat -tulpn | awk '\''{print $4}'\'' | grep -o '\'':[0-9]*'\'' | sed '\''s/://'\'' | sort -u)
-            APP_PORT=3000
-            while [[ $(echo "$USED_PORTS" | fgrep -w $APP_PORT) ]]; do
-              APP_PORT=$((APP_PORT + 1))
+            # Function to check if port is available
+            check_port() {
+              local port=$1
+              # Check if port is in use (listening)
+              if netstat -tuln | grep -q ":$port "; then
+                return 1  # Port is in use
+              fi
+              # Try to bind to port to double-check availability
+              if timeout 2 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+                return 1  # Port is in use
+              fi
+              return 0  # Port is available
+            }
+            
+            # Search for available port in range 3000-9999
+            for port in {3000..9999}; do
+              if check_port $port; then
+                echo $port
+                exit 0
+              fi
             done
-            echo $APP_PORT
+            
+            # If no port found in range, error
+            echo "ERROR: No available ports found in range 3000-9999" >&2
+            exit 1
           ')
           echo "Found available port: $APP_PORT"
           echo "APP_PORT=$APP_PORT" >> $GITHUB_OUTPUT
@@ -100,11 +119,34 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           script: |
             cd /var/www/metalgest
-            echo "APP_PORT=${{ needs.port-check.outputs.APP_PORT }}" > .env
+            
+            # Create environment file
+            echo "# Backend Environment Variables" > .env
+            echo "NODE_ENV=production" >> .env
+            echo "PORT=${{ needs.port-check.outputs.APP_PORT }}" >> .env
+            echo "API_VERSION=v1" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}" >> .env
             echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}" >> .env
+            echo "" >> .env
+            echo "# Database Environment Variables" >> .env
+            echo "POSTGRES_DB=${{ secrets.DB_NAME }}" >> .env
+            echo "POSTGRES_USER=${{ secrets.DB_USER }}" >> .env
+            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            
+            # Update nginx configuration with actual port
+            sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx.conf
+            
+            # Deploy with Docker Compose
             docker-compose down || true
             docker-compose up -d --build
             # Health check
-            sleep 15
+            sleep 20
             docker ps
-            curl -f http://localhost:${{ needs.port-check.outputs.APP_PORT }}/api/v1/health || exit 1
+            # Check if nginx is running (port 80)
+            if ! curl -f http://localhost:80/api/v1/health; then
+              echo "Health check failed, checking container logs..."
+              docker logs metalgest_backend_1 --tail 50
+              docker logs metalgest_nginx_1 --tail 50
+              exit 1
+            fi

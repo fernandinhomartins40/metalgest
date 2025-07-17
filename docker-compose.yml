@@ -8,6 +8,8 @@ services:
     restart: always
     env_file:
       - ./.env
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
     networks:
       - app-network
     depends_on:
