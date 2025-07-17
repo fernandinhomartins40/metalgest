@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
-import { env } from '@/config/env';
-import { ResponseUtil } from '@/utils/response';
+import { env } from '../config/env';
+import { ResponseUtil } from '../utils/response';
 
 // General rate limiter
 export const generalLimiter = rateLimit({

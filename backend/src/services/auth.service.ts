@@ -1,13 +1,13 @@
-import { prisma } from '@/config/database';
-import { PasswordUtil } from '@/utils/password';
-import { JwtUtil } from '@/utils/jwt';
-import { AppError } from '@/middleware/errorHandler';
+import { prisma } from '../config/database';
+import { PasswordUtil } from '../utils/password';
+import { JwtUtil } from '../utils/jwt';
+import { AppError } from '../middleware/errorHandler';
 import { 
   LoginRequest, 
   RegisterRequest, 
   AuthTokens, 
   JwtPayload 
-} from '@/types';
+} from '../types';
 import { addDays } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 

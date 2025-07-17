@@ -3,23 +3,23 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import { env } from '@/config/env';
-import { logger, logStream } from '@/config/logger';
-import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
-import { generalLimiter } from '@/middleware/rateLimiter';
+import { env } from './config/env';
+import { logger, logStream } from './config/logger';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { generalLimiter } from './middleware/rateLimiter';
 
 // Import routes
-import authRoutes from '@/routes/auth.routes';
-import userRoutes from '@/routes/user.routes';
-import productRoutes from '@/routes/product.routes';
-import serviceRoutes from '@/routes/service.routes';
-import clientRoutes from '@/routes/client.routes';
-import quoteRoutes from '@/routes/quote.routes';
-import serviceOrderRoutes from '@/routes/serviceOrder.routes';
-import transactionRoutes from '@/routes/transaction.routes';
-import dashboardRoutes from '@/routes/dashboard.routes';
-import settingsRoutes from '@/routes/settings.routes';
-import healthRoutes from '@/routes/health.routes';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import productRoutes from './routes/product.routes';
+import serviceRoutes from './routes/service.routes';
+import clientRoutes from './routes/client.routes';
+import quoteRoutes from './routes/quote.routes';
+import serviceOrderRoutes from './routes/serviceOrder.routes';
+import transactionRoutes from './routes/transaction.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import settingsRoutes from './routes/settings.routes';
+import healthRoutes from './routes/health.routes';
 
 const app = express();
 

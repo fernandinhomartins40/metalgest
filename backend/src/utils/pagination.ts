@@ -1,4 +1,4 @@
-import { PaginationParams, PaginatedResponse } from '@/types';
+import { PaginationParams, PaginatedResponse } from '../types';
 
 export class PaginationUtil {
   static DEFAULT_PAGE = 1;

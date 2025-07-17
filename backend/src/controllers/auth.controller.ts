@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { AuthenticatedRequest } from '@/types';
-import { authService } from '@/services/auth.service';
-import { ResponseUtil } from '@/utils/response';
-import { asyncHandler } from '@/middleware/errorHandler';
+import { AuthenticatedRequest } from '../types';
+import { authService } from '../services/auth.service';
+import { ResponseUtil } from '../utils/response';
+import { asyncHandler } from '../middleware/errorHandler';
 
 export class AuthController {
   login = asyncHandler(async (req: Request, res: Response) => {

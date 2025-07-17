@@ -7,7 +7,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "8080:8080"
+      - "3006:3006"
     networks:
       - app-network
     depends_on:

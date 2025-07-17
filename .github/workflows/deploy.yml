@@ -99,7 +99,7 @@ jobs:
             # Create environment file
             echo "Creating .env file..."
             echo "NODE_ENV=production" > .env
-            echo "PORT=8080" >> .env
+            echo "PORT=3006" >> .env
             echo "API_VERSION=v1" >> .env
             echo "JWT_SECRET=${JWT_SECRET}" >> .env
             echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> .env
@@ -112,7 +112,7 @@ jobs:
             echo "Database config: ${DB_USER}@db:5432/${DB_NAME}"
             
             # Update nginx config
-            sed -i "s/PORT_PLACEHOLDER/8080/g" nginx-initial.conf
+            sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
             cp nginx-initial.conf nginx.conf
             
             # Clean up
@@ -148,8 +148,8 @@ jobs:
             done
             
             # Try to connect to backend port directly
-            echo "Testing backend port 8080 directly..."
-            docker-compose exec -T backend netstat -tlnp | grep 8080 || echo "Port 8080 not listening in backend container"
+            echo "Testing backend port 3006 directly..."
+            docker-compose exec -T backend netstat -tlnp | grep 3006 || echo "Port 3006 not listening in backend container"
             
             # Check container status
             echo "=== Container Status ==="
@@ -163,11 +163,11 @@ jobs:
             fi
             
             # Test backend directly on port 8080
-            echo "Testing backend directly on port 8080..."
-            if curl -f http://localhost:8080/api/v1/health; then
-              echo "✅ Backend is working on port 8080"
+            echo "Testing backend directly on port 3006..."
+            if curl -f http://localhost:3006/api/v1/health; then
+              echo "✅ Backend is working on port 3006"
             else
-              echo "❌ Backend failed on port 8080, checking all logs..."
+              echo "❌ Backend failed on port 3006, checking all logs..."
               echo "=== Backend Logs ==="
               docker-compose logs backend --tail=50
               echo "=== Environment Variables ==="

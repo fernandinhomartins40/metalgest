@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { ResponseUtil } from '@/utils/response';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { prisma } from '@/config/database';
-import { env } from '@/config/env';
+import { ResponseUtil } from '../utils/response';
+import { asyncHandler } from '../middleware/errorHandler';
+import { prisma } from '../config/database';
+import { env } from '../config/env';
 
 const router = Router();
 

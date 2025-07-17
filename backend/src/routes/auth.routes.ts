@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { authController } from '@/controllers/auth.controller';
-import { authenticate } from '@/middleware/auth';
-import { authLimiter, passwordResetLimiter } from '@/middleware/rateLimiter';
-import { auditMiddleware } from '@/middleware/audit';
-import { validateSchema } from '@/utils/validation';
-import { authSchemas } from '@/utils/validationSchemas';
+import { authController } from '../controllers/auth.controller';
+import { authenticate } from '../middleware/auth';
+import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
+import { auditMiddleware } from '../middleware/audit';
+import { validateSchema } from '../utils/validation';
+import { authSchemas } from '../utils/validationSchemas';
 
 const router = Router();
 

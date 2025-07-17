@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ApiResponse, ApiError } from '@/types';
+import { ApiResponse, ApiError } from '../types';
 
 export class ResponseUtil {
   static success<T>(

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@/types';
-import { prisma } from '@/config/database';
-import { logger } from '@/config/logger';
+import { AuthenticatedRequest } from '../types';
+import { prisma } from '../config/database';
+import { logger } from '../config/logger';
 
 export const auditLog = (action: string, module: string) => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

@@ -1,6 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { env } from '@/config/env';
-import { JwtPayload, AuthTokens } from '@/types';
+import { env } from '../config/env';
+import { JwtPayload, AuthTokens } from '../types';
 
 export class JwtUtil {
   static generateAccessToken(payload: JwtPayload): string {

@@ -1,9 +1,9 @@
 import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@/types';
-import { JwtUtil } from '@/utils/jwt';
-import { ResponseUtil } from '@/utils/response';
-import { prisma } from '@/config/database';
-import { logger } from '@/config/logger';
+import { AuthenticatedRequest } from '../types';
+import { JwtUtil } from '../utils/jwt';
+import { ResponseUtil } from '../utils/response';
+import { prisma } from '../config/database';
+import { logger } from '../config/logger';
 
 export const authenticate = async (
   req: AuthenticatedRequest,

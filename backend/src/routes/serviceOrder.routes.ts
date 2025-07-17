@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '@/middleware/auth';
-import { auditMiddleware } from '@/middleware/audit';
-import { ResponseUtil } from '@/utils/response';
-import { asyncHandler } from '@/middleware/errorHandler';
+import { authenticate } from '../middleware/auth';
+import { auditMiddleware } from '../middleware/audit';
+import { ResponseUtil } from '../utils/response';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
