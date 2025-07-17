@@ -20,6 +20,7 @@ const Users = React.lazy(() => import("@/pages/Users"))
 const Settings = React.lazy(() => import("@/pages/Settings"))
 const Login = React.lazy(() => import("@/pages/Login"))
 const Register = React.lazy(() => import("@/pages/Register"))
+const PublicQuote = React.lazy(() => import("@/pages/PublicQuote"))
 
 function App() {
   return (
@@ -37,6 +38,11 @@ function App() {
       <Route path="/register" element={
         <Suspense fallback={<Loading fullScreen />}>
           <Register />
+        </Suspense>
+      } />
+      <Route path="/quote/:token" element={
+        <Suspense fallback={<Loading fullScreen />}>
+          <PublicQuote />
         </Suspense>
       } />
       

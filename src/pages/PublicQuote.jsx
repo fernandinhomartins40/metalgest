@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Loading } from "@/components/ui/loading"
 import { FileText, CheckCircle, XCircle } from "lucide-react"
-import { db } from "@/lib/db"
+import { api } from "@/services/api"
 import { pdf } from "@/lib/pdf"
 
 function PublicQuote() {
@@ -23,8 +23,8 @@ function PublicQuote() {
   const loadQuote = async () => {
     try {
       setLoading(true)
-      const data = await db.quotes.getPublicLink(token)
-      setQuote(data.quote)
+      const data = await api.quotes.getPublicQuote(token)
+      setQuote(data)
     } catch (error) {
       console.error("Error loading quote:", error)
       setError(error.message)
@@ -41,7 +41,7 @@ function PublicQuote() {
   const handleResponse = async (status) => {
     try {
       setLoading(true)
-      await db.quotes.updateQuoteResponse(token, {
+      await api.quotes.updatePublicQuoteResponse(token, {
         status,
         comments: ""
       })

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useApi } from "@/hooks/useApi"
-import { api } from "@/lib/api"
+import { api } from "@/services/api"
 import { permissions } from "@/lib/permissions"
 import {
   UserPlus,

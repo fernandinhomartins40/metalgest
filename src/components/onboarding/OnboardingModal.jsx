@@ -3,7 +3,8 @@ import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { supabase } from "@/lib/supabase"
+import { auth } from "@/services/auth"
+import { api } from "@/services/api"
 import {
   FileText,
   Users,
@@ -50,24 +51,14 @@ function OnboardingModal({ isOpen, onClose }) {
   const handleClose = async () => {
     if (!showAgain) {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const timestamp = new Date().toISOString()
-          
-          const { error } = await supabase
-            .from("user_preferences")
-            .upsert({
-              user_id: user.id,
-              show_onboarding: false,
-              onboarding_completed: true,
-              created_at: timestamp,
-              updated_at: timestamp
-            }, {
-              onConflict: 'user_id',
-              returning: 'minimal'
-            })
-
-          if (error) throw error
+        const currentUser = await auth.getCurrentUser()
+        if (currentUser) {
+          // For now, we'll just close the modal
+          // TODO: Implement user preferences endpoint in backend
+          // await api.settings.updateUserPreferences({
+          //   show_onboarding: false,
+          //   onboarding_completed: true
+          // })
         }
       } catch (error) {
         console.error("Error saving preferences:", error)

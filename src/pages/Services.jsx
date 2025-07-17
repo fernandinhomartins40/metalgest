@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { Loading } from "@/components/ui/loading"
 import { useApi } from "@/hooks/useApi"
-import { api } from "@/lib/api"
+import { api } from "@/services/api"
 import { ServiceForm } from "@/components/services/ServiceForm"
 import { ServiceList } from "@/components/services/ServiceList"
 

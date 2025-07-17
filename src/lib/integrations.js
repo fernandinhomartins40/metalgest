@@ -1,19 +1,13 @@
 
 import { storage } from "@/lib/storage"
-import { supabase } from "@/lib/supabase"
+import { api } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
 
 export const integrations = {
   // Orçamento → Produção
   createServiceOrderFromQuote: async (quoteId) => {
     try {
-      const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
-        .select('*')
-        .eq('id', quoteId)
-        .single()
-
-      if (quoteError) throw quoteError
+      const quote = await api.quotes.get(quoteId)
 
       const serviceOrder = {
         quote_id: quoteId,
@@ -27,21 +21,10 @@ export const integrations = {
         tags: []
       }
 
-      const { data, error } = await supabase
-        .from('service_orders')
-        .insert(serviceOrder)
-        .select()
-        .single()
-
-      if (error) throw error
+      const data = await api.serviceOrders.createFromQuote(quoteId, serviceOrder)
 
       // Update quote status
-      const { error: updateError } = await supabase
-        .from('quotes')
-        .update({ status: 'approved' })
-        .eq('id', quoteId)
-
-      if (updateError) throw updateError
+      await api.quotes.update(quoteId, { status: 'approved' })
 
       return data
     } catch (error) {
@@ -57,13 +40,10 @@ export const integrations = {
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString()
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString()
 
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .gte('date', startOfMonth)
-        .lte('date', endOfMonth)
-
-      if (error) throw error
+      const transactions = await api.transactions.list({
+        startDate: startOfMonth,
+        endDate: endOfMonth
+      })
 
       // Calculate DRE values
       const dre = {

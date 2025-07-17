@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabase"
+import { api } from "@/services/api"
 
 const MP_USER_ID = "264122170"
 const MP_APP_ID = "2886237981414328"
@@ -33,13 +33,10 @@ export const mercadopago = {
       if (!response.ok) throw new Error(data.message)
 
       // Save subscription data
-      await supabase
-        .from("users")
-        .update({
-          subscription_id: data.id,
-          subscription_status: "pending"
-        })
-        .eq("id", userId)
+      await api.users.updateSubscription(data.id, {
+        subscription_id: data.id,
+        subscription_status: "pending"
+      })
 
       return data.init_point
     } catch (error) {
@@ -65,43 +62,31 @@ export const mercadopago = {
 
       switch (type) {
         case "subscription_authorized":
-          await supabase
-            .from("users")
-            .update({
-              plan: "premium",
-              subscription_status: "active",
-              subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            })
-            .eq("subscription_id", data.id)
+          await api.users.updateSubscription(data.id, {
+            plan: "premium",
+            subscription_status: "active",
+            subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          })
           break
 
         case "subscription_cancelled":
-          await supabase
-            .from("users")
-            .update({
-              plan: "free",
-              subscription_status: "cancelled",
-              subscription_expires_at: null
-            })
-            .eq("subscription_id", data.id)
+          await api.users.updateSubscription(data.id, {
+            plan: "free",
+            subscription_status: "cancelled",
+            subscription_expires_at: null
+          })
           break
 
         case "subscription_charged":
-          await supabase
-            .from("users")
-            .update({
-              subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            })
-            .eq("subscription_id", data.id)
+          await api.users.updateSubscription(data.id, {
+            subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          })
           break
 
         case "subscription_payment_failed":
-          await supabase
-            .from("users")
-            .update({
-              subscription_status: "failed"
-            })
-            .eq("subscription_id", data.id)
+          await api.users.updateSubscription(data.id, {
+            subscription_status: "failed"
+          })
           break
       }
     } catch (error) {

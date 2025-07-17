@@ -1,49 +1,50 @@
+import { apiClient } from '@/services/httpClient';
 
-import { storage } from "@/lib/storage"
-
+// Audit helper functions
 export const audit = {
-  log: (action, details) => {
-    const user = storage.get("user")
-    const logs = storage.get("audit_logs") || []
-    
-    const log = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      userId: user?.id || "system",
-      userName: user?.name || "Sistema",
-      action,
-      details,
-      ip: window.location.hostname,
-      userAgent: navigator.userAgent
+  log: async ({ action, module, details }) => {
+    try {
+      // Only log if user is authenticated
+      const token = localStorage.getItem('metalgest_access_token');
+      if (!token) {
+        return;
+      }
+
+      // Get additional context
+      const auditData = {
+        action,
+        module,
+        details: {
+          ...details,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+        },
+      };
+
+      // Send to backend (fire and forget)
+      await apiClient.post('/audit/log', auditData);
+    } catch (error) {
+      // Don't throw errors for audit logging
+      console.warn('Audit logging failed:', error);
     }
-    
-    logs.push(log)
-    storage.set("audit_logs", logs)
-    
-    return log
   },
+
+  // Convenience methods for common actions
+  create: (module, details) => audit.log({ action: 'create', module, details }),
+  read: (module, details) => audit.log({ action: 'read', module, details }),
+  update: (module, details) => audit.log({ action: 'update', module, details }),
+  delete: (module, details) => audit.log({ action: 'delete', module, details }),
+  list: (module, details) => audit.log({ action: 'list', module, details }),
+  search: (module, details) => audit.log({ action: 'search', module, details }),
   
-  getLogs: (filters = {}) => {
-    const logs = storage.get("audit_logs") || []
-    
-    return logs.filter(log => {
-      if (filters.userId && log.userId !== filters.userId) return false
-      if (filters.action && log.action !== filters.action) return false
-      if (filters.startDate && new Date(log.timestamp) < new Date(filters.startDate)) return false
-      if (filters.endDate && new Date(log.timestamp) > new Date(filters.endDate)) return false
-      return true
-    })
-  },
-  
-  clearOldLogs: (daysToKeep = 30) => {
-    const logs = storage.get("audit_logs") || []
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
-    
-    const filteredLogs = logs.filter(log => 
-      new Date(log.timestamp) > cutoffDate
-    )
-    
-    storage.set("audit_logs", filteredLogs)
-  }
-}
+  // Authentication actions
+  login: (details) => audit.log({ action: 'login', module: 'auth', details }),
+  logout: (details) => audit.log({ action: 'logout', module: 'auth', details }),
+  register: (details) => audit.log({ action: 'register', module: 'auth', details }),
+
+  // Custom actions
+  custom: (action, module, details) => audit.log({ action, module, details }),
+};
+
+export default audit;

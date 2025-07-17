@@ -17,6 +17,6 @@ Essa política cobre qualquer falha de segurança ou acesso indevido que possa c
 
 - Dados de usuários
 - Autenticação e permissões
-- Integrações com APIs externas (ex: Supabase, Mercado Pago)
+- Integrações com APIs externas (ex: Mercado Pago)
 
 Agradecemos por sua contribuição para tornar o MetalGest mais seguro! 🙏

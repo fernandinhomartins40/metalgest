@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from "react"
 import { Navigate, useLocation } from "react-router-dom"
-import { auth } from "@/lib/auth"
-import { storage } from "@/lib/storage"
+import { auth } from "@/services/auth"
+import { storage } from "@/utils/storage"
 import { permissions } from "@/lib/permissions"
 import { Loading } from "@/components/ui/loading"
 import { useToast } from "@/components/ui/use-toast"
@@ -16,36 +16,21 @@ function ProtectedRoute({ children, requiredModule }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedUser = storage.get("user")
+        const currentUser = await auth.getCurrentUser()
         
-        if (!storedUser) {
-          const currentUser = await auth.getCurrentUser()
-          if (currentUser) {
-            const { data: userData, error } = await supabase
-              .from("users")
-              .select("role")
-              .eq("id", currentUser.id)
-              .single()
-
-            if (error) throw error
-
-            storage.set("user", {
-              id: currentUser.id,
-              email: currentUser.email,
-              role: userData.role
-            })
-            setUser(currentUser)
-          } else {
-            setUser(null)
+        if (currentUser) {
+          // User data already includes role from JWT token
+          setUser(currentUser)
+          
+          // Update stored user if needed
+          const storedUser = storage.get("user")
+          if (!storedUser || storedUser.id !== currentUser.id) {
+            storage.set("user", currentUser)
           }
         } else {
-          const currentUser = await auth.getCurrentUser()
-          if (currentUser && currentUser.id === storedUser.id) {
-            setUser(currentUser)
-          } else {
-            storage.remove("user")
-            setUser(null)
-          }
+          // No valid user found, clear storage
+          storage.remove("user")
+          setUser(null)
         }
       } catch (error) {
         console.error("Auth check failed:", error)

@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabase"
+import { api } from "@/services/api"
 
 const ASAAS_API_URL = "https://api.asaas.com/v3"
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY
@@ -93,21 +93,14 @@ export const asaas = {
 
       if (payment.status === "CONFIRMED" || payment.status === "RECEIVED") {
         // Update user subscription status
-        const { data: subscriptionData, error: subscriptionError } = await supabase
-          .from("users")
-          .update({
-            plan: "premium",
-            subscription_status: "active",
-            subscription_expires_at: new Date(payment.dueDate).toISOString()
-          })
-          .eq("subscription_id", subscription.id)
-          .select()
-          .single()
+        const subscriptionData = await api.users.updateSubscription(subscription.id, {
+          plan: "premium",
+          subscription_status: "active",
+          subscription_expires_at: new Date(payment.dueDate).toISOString()
+        })
 
-        if (subscriptionError) throw subscriptionError
-
-        // Log the successful payment
-        await supabase.from("audit_logs").insert({
+        // Log the successful payment via audit system
+        await api.audit.log({
           user_id: subscriptionData.id,
           action: "subscription_payment",
           module: "billing",
@@ -120,13 +113,10 @@ export const asaas = {
         })
       } else if (payment.status === "OVERDUE" || payment.status === "CANCELED") {
         // Update user subscription status
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({
-            plan: "free",
-            subscription_status: payment.status.toLowerCase()
-          })
-          .eq("subscription_id", subscription.id)
+        await api.users.updateSubscription(subscription.id, {
+          plan: "free",
+          subscription_status: payment.status.toLowerCase()
+        })
       }
 
       return { success: true }

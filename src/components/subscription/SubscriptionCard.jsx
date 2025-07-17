@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { Crown, Check, AlertTriangle } from "lucide-react"
 import { mercadopago } from "@/lib/mercadopago"
-import { supabase } from "@/lib/supabase"
+import { auth } from "@/services/auth"
+import { api } from "@/services/api"
 
 function SubscriptionCard() {
   const [loading, setLoading] = React.useState(false)
@@ -19,15 +20,14 @@ function SubscriptionCard() {
 
   const loadUserData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase
-          .from("users")
-          .select("plan, subscription_status, subscription_expires_at")
-          .eq("id", user.id)
-          .single()
-
-        setUserData(data)
+      const currentUser = await auth.getCurrentUser()
+      if (currentUser) {
+        // User data already includes subscription info from JWT
+        setUserData({
+          plan: currentUser.plan || "free",
+          subscription_status: currentUser.subscription_status || "inactive",
+          subscription_expires_at: currentUser.subscription_expires_at || null
+        })
       }
     } catch (error) {
       console.error("Error loading user data:", error)
@@ -37,10 +37,10 @@ function SubscriptionCard() {
   const handleSubscribe = async () => {
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("User not found")
+      const currentUser = await auth.getCurrentUser()
+      if (!currentUser) throw new Error("User not found")
 
-      const checkoutUrl = await mercadopago.createSubscription(user.id)
+      const checkoutUrl = await mercadopago.createSubscription(currentUser.id)
       window.location.href = checkoutUrl
     } catch (error) {
       console.error("Error subscribing:", error)

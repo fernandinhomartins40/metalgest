@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { useApi } from "@/hooks/useApi"
-import { api } from "@/lib/api"
+import { api } from "@/services/api"
 import {
   Building2,
   Settings as SettingsIcon,

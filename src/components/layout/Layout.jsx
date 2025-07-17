@@ -5,7 +5,8 @@ import Sidebar from "@/components/layout/Sidebar"
 import Navbar from "@/components/layout/Navbar"
 import OnboardingModal from "@/components/onboarding/OnboardingModal"
 import HelpPanel from "@/components/help/HelpPanel"
-import { supabase } from "@/lib/supabase"
+import { auth } from "@/services/auth"
+import { api } from "@/services/api"
 
 function Layout() {
   const [showOnboarding, setShowOnboarding] = React.useState(false)
@@ -17,19 +18,17 @@ function Layout() {
 
   const checkOnboardingStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: preferences } = await supabase
-          .from("user_preferences")
-          .select("show_onboarding, onboarding_completed")
-          .eq("user_id", user.id)
-          .single()
-
-        if (!preferences) {
-          setShowOnboarding(true)
-        } else if (preferences.show_onboarding && !preferences.onboarding_completed) {
-          setShowOnboarding(true)
-        }
+      const currentUser = await auth.getCurrentUser()
+      if (currentUser) {
+        // For now, we'll disable onboarding until user preferences endpoint is implemented
+        // This prevents errors while the backend is being fully implemented
+        setShowOnboarding(false)
+        
+        // TODO: Implement user preferences endpoint in backend
+        // const preferences = await api.settings.getUserPreferences()
+        // if (!preferences || (preferences.show_onboarding && !preferences.onboarding_completed)) {
+        //   setShowOnboarding(true)
+        // }
       }
     } catch (error) {
       console.error("Error checking onboarding status:", error)

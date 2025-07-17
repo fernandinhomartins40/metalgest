@@ -1,0 +1,356 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  name                   String
+  password               String
+  role                   Role      @default(USER)
+  active                 Boolean   @default(true)
+  emailVerified          Boolean   @default(false)
+  emailVerificationToken String?
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
+  plan                   Plan      @default(FREE)
+  subscriptionId         String?
+  subscriptionStatus     String?
+  subscriptionExpiresAt  DateTime?
+  lastLogin              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // Relations
+  products      Product[]
+  services      Service[]
+  clients       Client[]
+  quotes        Quote[]
+  serviceOrders ServiceOrder[]
+  transactions  Transaction[]
+  settings      Setting[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  stock       Int      @default(0)
+  minStock    Int      @default(0)
+  sku         String?
+  barcode     String?
+  weight      Decimal? @db.Decimal(8, 3)
+  dimensions  String?
+  active      Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quoteItems QuoteItem[]
+
+  @@map("products")
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  duration    Int?     // Duration in minutes
+  active      Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceItems ServiceItem[]
+
+  @@map("services")
+}
+
+model Client {
+  id                     String     @id @default(uuid())
+  personType             PersonType @default(FISICA)
+  name                   String
+  tradingName            String?
+  document               String
+  stateRegistration      String?
+  municipalRegistration  String?
+  zipCode                String?
+  street                 String?
+  number                 String?
+  complement             String?
+  neighborhood           String?
+  city                   String?
+  state                  String?
+  phone                  String?
+  mobile                 String?
+  email                  String?
+  contactName            String?
+  contactRole            String?
+  category               ClientCategory @default(REGULAR)
+  notes                  String?
+  active                 Boolean        @default(true)
+  userId                 String
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quotes        Quote[]
+  serviceOrders ServiceOrder[]
+
+  @@map("clients")
+}
+
+model Quote {
+  id                   String      @id @default(uuid())
+  clientId             String
+  description          String
+  totalValue           Decimal     @db.Decimal(10, 2)
+  profitPercentage     Decimal     @default(0) @db.Decimal(5, 2)
+  status               QuoteStatus @default(DRAFT)
+  tags                 String[]
+  publicToken          String?     @unique
+  publicLinkExpiresAt  DateTime?
+  notes                String?
+  validUntil           DateTime?
+  terms                String?
+  userId               String
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items        QuoteItem[]
+  serviceItems ServiceItem[]
+  serviceOrder ServiceOrder?
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  productId   String
+  description String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  discount    Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  quote   Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("quote_items")
+}
+
+model ServiceItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  serviceId   String
+  description String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  discount    Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  quote   Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_items")
+}
+
+model ServiceOrder {
+  id            String            @id @default(uuid())
+  quoteId       String            @unique
+  clientId      String
+  responsibleId String
+  status        ServiceOrderStatus @default(WAITING)
+  priority      Priority          @default(MEDIUM)
+  deadline      DateTime?
+  startDate     DateTime?
+  endDate       DateTime?
+  notes         String?
+  tags          String[]
+  estimatedHours Int?
+  actualHours   Int?
+  userId        String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("service_orders")
+}
+
+model Transaction {
+  id            String            @id @default(uuid())
+  type          TransactionType
+  value         Decimal           @db.Decimal(10, 2)
+  description   String
+  paymentMethod PaymentMethod
+  category      String
+  date          DateTime
+  dueDate       DateTime?
+  paidAt        DateTime?
+  status        TransactionStatus @default(PENDING)
+  notes         String?
+  tags          String[]
+  referenceId   String?          // Reference to quote, service order, etc.
+  userId        String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model Setting {
+  id                     String   @id @default(uuid())
+  userId                 String
+  companyName            String?
+  companyDocument        String?
+  companyPhone           String?
+  companyEmail           String?
+  companyAddress         String?
+  companyLogo            String?
+  notificationSettings   Json?
+  systemSettings         Json?
+  quoteSettings          Json?
+  invoiceSettings        Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  module    String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  USER
+  FINANCEIRO
+  COMERCIAL
+  PRODUCAO
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
+enum PersonType {
+  FISICA
+  JURIDICA
+}
+
+enum ClientCategory {
+  POTENTIAL
+  REGULAR
+  VIP
+}
+
+enum QuoteStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ServiceOrderStatus {
+  WAITING
+  IN_PROGRESS
+  PAUSED
+  FINISHED
+  DELIVERED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  BANK_TRANSFER
+  PIX
+  BOLETO
+  CHECK
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}

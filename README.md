@@ -1,12 +1,12 @@
 # MetalGest
 
-Sistema de gestão para empresas do setor metalúrgico, desenvolvido com Supabase e Hostinger Horizons. Gerencia clientes, orçamentos, ordens de serviço, produção, financeiro, produtos/serviços e DRE.
+Sistema de gestão para empresas do setor metalúrgico. Gerencia clientes, orçamentos, ordens de serviço, produção, financeiro, produtos/serviços e DRE.
 
 ## 🚀 Tecnologias Utilizadas
 
 - [React (via Vite)](https://vitejs.dev/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Supabase](https://supabase.com/)
+
 - [Hostinger Horizons](https://www.hostinger.com/horizons)
 - [Mercado Pago API](https://www.mercadopago.com.br/developers/)
 
