@@ -7,6 +7,7 @@ WORKDIR /app
 COPY backend/package.json ./
 COPY backend/dist ./dist
 COPY backend/prisma ./prisma
+COPY backend/src/register-aliases.js ./dist/register-aliases.js
 
 # Instala apenas dependências de produção (module-alias já está no package.json)
 RUN npm install --only=production && npm cache clean --force

@@ -1,4 +1,6 @@
-import 'module-alias/register';
+// Registra os aliases antes de qualquer import
+require('./register-aliases');
+
 import app from '@/app';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
