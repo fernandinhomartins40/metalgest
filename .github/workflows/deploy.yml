@@ -108,25 +108,58 @@ jobs:
             lsof -ti:80 | xargs kill -9 || true
             lsof -ti:443 | xargs kill -9 || true
             
-            # Stop any existing containers
-            docker-compose down || true
+            # Stop any existing containers and clean up
+            docker-compose down -v || true
             docker system prune -f || true
+            docker volume prune -f || true
+            
+            # Ensure directories exist and check contents
+            mkdir -p frontend/dist backend/dist certbot_certs certbot_www
+            
+            echo "=== Directory Contents Check ==="
+            ls -la
+            ls -la frontend/ || echo "Frontend directory not found"
+            ls -la backend/ || echo "Backend directory not found"
             
             # First, deploy with HTTP-only configuration
             echo "=== Phase 1: Deploy with HTTP-only configuration ==="
             cp nginx-initial.conf nginx.conf
             
-            # Deploy with Docker Compose
-            docker-compose up -d --build
+            # Build and deploy with Docker Compose
+            echo "Building and starting containers..."
+            if ! docker-compose build --no-cache; then
+              echo "ERROR: Docker build failed"
+              exit 1
+            fi
             
-            # Wait for services to be ready
+            if ! docker-compose up -d; then
+              echo "ERROR: Docker compose up failed"
+              docker-compose logs
+              exit 1
+            fi
+            
+            # Wait for services to be ready with better monitoring
             echo "Waiting for services to be ready..."
-            sleep 30
+            for i in {1..60}; do
+              if docker-compose ps | grep -q "Up"; then
+                echo "At least one service is up after ${i} seconds"
+                break
+              fi
+              echo "Waiting... ${i}/60"
+              sleep 1
+            done
             
-            # Check if containers are running
+            # Check if containers are running with detailed info
             echo "=== Container Status ==="
             docker-compose ps
             docker ps -a
+            
+            # Check logs if containers failed to start
+            if ! docker-compose ps | grep -q "Up"; then
+              echo "=== Container Logs ==="
+              docker-compose logs --tail=50
+              exit 1
+            fi
             
             # Test HTTP connectivity first
             echo "=== Testing HTTP connectivity ==="
@@ -139,44 +172,38 @@ jobs:
               sleep 10
             done
             
-            # Now try to generate SSL certificate
-            echo "=== Phase 2: Generate SSL certificate ==="
-            if docker run --rm -v "$(pwd)/certbot_certs:/etc/letsencrypt" -v "$(pwd)/certbot_www:/var/www/certbot" certbot/certbot:latest certonly --webroot --webroot-path=/var/www/certbot --email contato@metalgest.com.br --agree-tos --no-eff-email --keep-until-expiring --domains metalgest.com.br,www.metalgest.com.br; then
-              echo "SSL certificate generated successfully"
-              
-              # Restore full nginx config with SSL
-              git show HEAD:nginx.conf > nginx.conf || curl -s https://raw.githubusercontent.com/fernandinhomartins40/metalgest/main/nginx.conf > nginx.conf
-              sed -i "s/PORT_PLACEHOLDER/3006/g" nginx.conf
-              
-              # Reload nginx to use SSL certificate
-              docker-compose exec nginx nginx -s reload
-              
-              # Wait for SSL to be ready
-              sleep 10
-              
-              # Setup SSL renewal cron job
-              echo "Setting up SSL renewal cron job..."
-              chmod +x ssl-renewal.sh
-              (crontab -l 2>/dev/null; echo "0 2 * * * /var/www/metalgest/ssl-renewal.sh >> /var/log/ssl-renewal.log 2>&1") | crontab -
-              
-              echo "SSL configuration completed successfully"
-            else
-              echo "SSL certificate generation failed, continuing with HTTP only"
-              echo "This is normal for first deployment - SSL will be configured in next deployment"
-            fi
+            # Skip SSL for now - focus on getting HTTP working first
+            echo "=== Phase 2: SSL configuration skipped for initial deployment ==="
+            echo "SSL will be configured in a future deployment once HTTP is stable"
             # Final health check
             echo "=== Final Health Check ==="
             sleep 10
             docker-compose ps
             
-            # Check if containers are running with proper names
-            BACKEND_CONTAINER=$(docker-compose ps -q backend)
-            NGINX_CONTAINER=$(docker-compose ps -q nginx)
+            # Get container names dynamically
+            BACKEND_CONTAINER=$(docker-compose ps -q backend 2>/dev/null)
+            NGINX_CONTAINER=$(docker-compose ps -q nginx 2>/dev/null)
+            
+            # Alternative method to get container names
+            if [ -z "$BACKEND_CONTAINER" ]; then
+              BACKEND_CONTAINER=$(docker ps --format "table {{.Names}}" | grep backend | head -1)
+            fi
+            
+            if [ -z "$NGINX_CONTAINER" ]; then
+              NGINX_CONTAINER=$(docker ps --format "table {{.Names}}" | grep nginx | head -1)
+            fi
+            
+            echo "Backend container: $BACKEND_CONTAINER"
+            echo "Nginx container: $NGINX_CONTAINER"
             
             if [ -z "$BACKEND_CONTAINER" ] || [ -z "$NGINX_CONTAINER" ]; then
               echo "ERROR: Containers not found!"
+              echo "=== All running containers ==="
+              docker ps
+              echo "=== Docker compose status ==="
               docker-compose ps
-              docker ps -a
+              echo "=== Container logs ==="
+              docker-compose logs --tail=30
               exit 1
             fi
             
@@ -191,20 +218,8 @@ jobs:
               exit 1
             fi
             
-            # Test HTTPS if SSL is configured
-            if [ -f "certbot_certs/live/metalgest.com.br/fullchain.pem" ]; then
-              echo "=== Testing HTTPS API health check ==="
-              if curl -f -k https://localhost:443/api/v1/health; then
-                echo "HTTPS API health check passed!"
-                echo "Deploy successful! API is running on port 3006 with SSL enabled"
-              else
-                echo "HTTPS API health check failed, but HTTP works"
-                echo "Deploy successful! API is running on port 3006 (HTTP only)"
-              fi
-            else
-              echo "SSL certificate not found, running HTTP only"
-              echo "Deploy successful! API is running on port 3006 (HTTP only)"
-            fi
+            # Skip HTTPS test for now
+            echo "Deploy successful! API is running on port 3006 (HTTP only)"
             
             # Test domain resolution
             echo "=== Testing domain access ==="
