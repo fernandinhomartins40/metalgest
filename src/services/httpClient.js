@@ -1,11 +1,11 @@
-import { toast } from "../components/ui/use-toast";
+// Note: Toast import will be handled at call site to avoid context issues
 
 // Base configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || (
   // Se estiver em produção, use o próprio domínio com HTTPS
   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173'
     ? `${window.location.protocol}//${window.location.host}/api/v1`
-    : 'http://localhost:3006/api/v1'
+    : 'http://localhost:8080/api/v1'
 );
 
 // Token management
@@ -245,16 +245,9 @@ class HttpClient {
   }
 }
 
-// Global error handler
+// Global error handler (without toast to avoid context issues)
 const handleApiError = (error) => {
   console.error('API Error:', error);
-  
-  // Show toast notification
-  toast({
-    variant: "destructive",
-    title: "Erro",
-    description: error.message || "Ocorreu um erro inesperado",
-  });
   
   // Handle specific error types
   if (error.status === 401) {
