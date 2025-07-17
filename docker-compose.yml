@@ -47,14 +47,6 @@ services:
     depends_on:
       - backend
 
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    command: ["certbot", "certonly", "--webroot", "--webroot-path=/var/www/certbot", "--email", "contato@metalgest.com.br", "--agree-tos", "--no-eff-email", "--keep-until-expiring", "--domains", "metalgest.com.br,www.metalgest.com.br"]
-    depends_on:
-      - nginx
 
 volumes:
   postgres_data:
