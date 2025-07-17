@@ -28,6 +28,9 @@ jobs:
           cd backend
           npm install
           npm run build
+          # Verificar se o build foi criado
+          echo "Verificando backend/dist:"
+          ls -la dist/ || echo "ERRO: Backend dist não foi criado!"
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
@@ -72,6 +75,7 @@ jobs:
           source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
+          debug: true
           
       - name: Ensure backend structure
         uses: appleboy/ssh-action@master
@@ -83,31 +87,67 @@ jobs:
             cd /var/www/metalgest
             
             # Verifica e cria estrutura do backend se necessário
-            echo "=== Verificando estrutura do backend ==="
+            echo "=== Verificando estrutura inicial ==="
+            echo "Conteúdo da pasta atual:"
             ls -la
+            echo ""
+            echo "Estrutura de diretórios:"
+            find . -type d -name "*dist*" -o -name "backend" -o -name "frontend" 2>/dev/null || echo "Nenhum diretório dist/backend/frontend encontrado"
+            echo ""
+            
+            # Criar estrutura backend se não existir
+            mkdir -p backend
             
             # Verifica se backend/dist existe
             if [ ! -d "backend/dist" ]; then
-              echo "⚠️ backend/dist não encontrado, criando estrutura..."
-              mkdir -p backend/dist
+              echo "⚠️ backend/dist não encontrado, verificando alternativas..."
               
-              # Se temos arquivos compilados na raiz, move para backend/
+              # Procurar por arquivos dist em qualquer lugar
               if [ -d "dist" ]; then
-                echo "Movendo dist para backend/"
+                echo "✓ Encontrado dist na raiz, movendo para backend/"
                 mv dist backend/
+              elif find . -name "*.js" -path "*/dist/*" | head -1 | grep -q .; then
+                echo "✓ Encontrados arquivos JS compilados, organizando estrutura..."
+                # Mover todos os arquivos dist encontrados para backend/dist
+                find . -name "dist" -type d | while read distdir; do
+                  if [ "$distdir" != "./backend/dist" ]; then
+                    echo "Movendo $distdir para backend/"
+                    mkdir -p backend/dist
+                    cp -r "$distdir"/* backend/dist/ 2>/dev/null || true
+                  fi
+                done
+              else
+                echo "❌ ERRO: Nenhum arquivo compilado encontrado!"
+                echo "Listando todos os arquivos JavaScript encontrados:"
+                find . -name "*.js" | head -10
+                exit 1
               fi
             fi
             
-            # Verifica se frontend/dist existe
+            # Verifica se frontend/dist existe e move para raiz
             if [ ! -d "dist" ] && [ -d "frontend/dist" ]; then
-              echo "Movendo frontend/dist para raiz"
+              echo "✓ Movendo frontend/dist para raiz"
               mv frontend/dist .
             fi
             
-            echo "✅ Estrutura verificada:"
-            ls -la backend/ 2>/dev/null || echo "Backend folder not found"
-            ls -la backend/dist/ 2>/dev/null || echo "Backend dist not found"
-            ls -la dist/ 2>/dev/null || echo "Frontend dist not found"
+            echo ""
+            echo "=== Estrutura final verificada ==="
+            echo "Backend structure:"
+            ls -la backend/ 2>/dev/null || echo "❌ Backend folder not found"
+            echo "Backend dist contents:"
+            ls -la backend/dist/ 2>/dev/null || echo "❌ Backend dist not found"
+            echo "Frontend dist (root):"
+            ls -la dist/ 2>/dev/null || echo "❌ Frontend dist not found"
+            echo ""
+            
+            # Verificação final obrigatória
+            if [ ! -f "backend/dist/index.js" ]; then
+              echo "❌ ERRO CRÍTICO: backend/dist/index.js não encontrado!"
+              echo "O deploy não pode continuar sem o backend compilado."
+              exit 1
+            else
+              echo "✅ backend/dist/index.js encontrado - estrutura OK"
+            fi
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master

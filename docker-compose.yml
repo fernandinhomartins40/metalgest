@@ -62,6 +62,9 @@ services:
       - ./dist:/var/www/frontend:ro
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
+    environment:
+      - NGINX_ENVSUBST_TEMPLATE_SUFFIX=.conf
+      - BACKEND_PORT=3006
     networks:
       - app-network
     depends_on:

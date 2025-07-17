@@ -6,10 +6,17 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copia todos os arquivos do backend transferidos pelo Actions
+# Copia arquivos do backend transferidos pelo Actions
+# Os artifacts são baixados para backend/dist pelo GitHub Actions
 COPY backend/package.json ./package.json
 COPY backend/dist ./dist
 COPY backend/prisma ./prisma
+
+# Debug: Verificar estrutura de arquivos
+RUN echo "=== Estrutura de arquivos no container ===" && \
+    ls -la . && \
+    echo "=== Conteúdo do dist ===" && \
+    ls -la dist/ 2>/dev/null || echo "ERRO: dist não encontrado"
 
 # Instala apenas dependências de produção
 RUN npm install --only=production && npm cache clean --force
