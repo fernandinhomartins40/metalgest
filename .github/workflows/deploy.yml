@@ -10,23 +10,25 @@ jobs:
     name: Check for Available Port
     runs-on: ubuntu-latest
     outputs:
-      APP_PORT: ${{ steps.port_check.outputs.APP_PORT }}
+      APP_PORT: ${{ steps.get_port.outputs.APP_PORT }}
 
     steps:
-      - name: Check for available port on VPS
-        id: port_check
-        uses: appleboy/ssh-action@master
-        with:
-          host: 82.25.69.57
-          username: root
-          password: ${{ secrets.VPS_PASSWORD }}
-          script: |
-            USED_PORTS=$(netstat -tulpn | awk '{print $4}' | grep -o ':[0-9]*' | sed 's/://' | sort -u)
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Get available port from VPS
+        id: get_port
+        run: |
+          APP_PORT=$(sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@82.25.69.57 '
+            USED_PORTS=$(netstat -tulpn | awk '\''{print $4}'\'' | grep -o '\'':[0-9]*'\'' | sed '\''s/://'\'' | sort -u)
             APP_PORT=3000
             while [[ $(echo "$USED_PORTS" | fgrep -w $APP_PORT) ]]; do
               APP_PORT=$((APP_PORT + 1))
             done
-            echo "APP_PORT=$APP_PORT" >> $GITHUB_OUTPUT
+            echo $APP_PORT
+          ')
+          echo "Found available port: $APP_PORT"
+          echo "APP_PORT=$APP_PORT" >> $GITHUB_OUTPUT
 
   build:
     name: Build Application
