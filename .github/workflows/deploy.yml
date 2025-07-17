@@ -98,7 +98,7 @@ jobs:
             
             # Create environment file
             echo "Creating .env file..."
-            cat > .env << EOF
+            cat > .env << 'ENVEOF'
 NODE_ENV=production
 PORT=3006
 API_VERSION=v1
@@ -108,7 +108,7 @@ DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
 POSTGRES_DB=${DB_NAME}
 POSTGRES_USER=${DB_USER}
 POSTGRES_PASSWORD=${DB_PASSWORD}
-EOF
+ENVEOF
             
             echo "Environment file created successfully"
             echo "Database config: ${DB_USER}@db:5432/${DB_NAME}"
