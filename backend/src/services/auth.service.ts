@@ -103,12 +103,13 @@ export class AuthService {
     // Hash password
     const hashedPassword = await PasswordUtil.hash(password);
 
-    // Create user
+    // Create user with ADMIN role by default (temporary for initial deployment)
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        role: 'ADMIN', // Give full access to new users for now
         emailVerified: true, // Auto-verify email for testing
         emailVerificationToken: null,
       },

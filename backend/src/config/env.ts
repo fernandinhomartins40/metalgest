@@ -93,8 +93,8 @@ export const env: EnvConfig = {
   // Email
   EMAIL_HOST: getEnvVar('EMAIL_HOST', 'smtp.gmail.com'),
   EMAIL_PORT: getEnvNumber('EMAIL_PORT', 587),
-  EMAIL_USER: getEnvVar('EMAIL_USER', ''),
-  EMAIL_PASS: getEnvVar('EMAIL_PASS', ''),
+  EMAIL_USER: getEnvVar('EMAIL_USER', 'noreply@metalgest.com'),
+  EMAIL_PASS: getEnvVar('EMAIL_PASS', 'dummy-password'),
   EMAIL_FROM: getEnvVar('EMAIL_FROM', 'MetalGest <noreply@metalgest.com>'),
 
   // File Upload
@@ -112,8 +112,8 @@ export const env: EnvConfig = {
   // External APIs
   VIACEP_API_URL: getEnvVar('VIACEP_API_URL', 'https://viacep.com.br/ws'),
   ASAAS_API_URL: getEnvVar('ASAAS_API_URL', 'https://www.asaas.com/api/v3'),
-  ASAAS_API_KEY: getEnvVar('ASAAS_API_KEY', ''),
-  MERCADOPAGO_ACCESS_TOKEN: getEnvVar('MERCADOPAGO_ACCESS_TOKEN', ''),
+  ASAAS_API_KEY: getEnvVar('ASAAS_API_KEY', 'dummy-key'),
+  MERCADOPAGO_ACCESS_TOKEN: getEnvVar('MERCADOPAGO_ACCESS_TOKEN', 'dummy-token'),
 };
 
 export default env;

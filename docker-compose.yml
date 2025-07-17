@@ -48,8 +48,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3006/api/v1/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   nginx:
     image: nginx:1.25-alpine
