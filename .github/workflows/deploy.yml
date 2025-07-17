@@ -72,7 +72,7 @@ jobs:
           host: 31.97.85.98
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
+          source: "source/Dockerfile,source/docker-compose.yml,source/entrypoint.sh,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
           debug: true
@@ -284,43 +284,13 @@ jobs:
             echo "Starting backend..."
             docker-compose up -d --build backend
             
-            # === Run Database Migrations ===
-            echo "=== Running Prisma migrations ==="
-            
-            # Wait for backend container to be running
-            sleep 15
-            
-            # First, generate Prisma client
-            echo "Generating Prisma client..."
-            if docker-compose exec -T backend npx prisma generate 2>/dev/null; then
-              echo "✅ Prisma client generated successfully"
-            else
-              echo "⚠️ Prisma client generation failed"
-              docker-compose logs backend --tail=10
-            fi
-            
-            # Try to deploy migrations first (production approach)
-            echo "Attempting to deploy migrations..."
-            if docker-compose exec -T backend npx prisma migrate deploy 2>/dev/null; then
-              echo "✅ Prisma migrations deployed successfully"
-            else
-              echo "⚠️ Migration deploy failed, trying db push (development approach)..."
-              if docker-compose exec -T backend npx prisma db push --force-reset --accept-data-loss 2>/dev/null; then
-                echo "✅ Database schema pushed successfully"
-              else
-                echo "❌ All database setup methods failed"
-                echo "Backend logs:"
-                docker-compose logs backend --tail=20
-                echo "Database logs:"
-                docker-compose logs db --tail=10
-                # Don't exit - continue with deployment to see if app works
-              fi
-            fi
+            # === Setup Database (handled by entrypoint) ===
+            echo "=== Database setup será gerenciado pelo entrypoint.sh ==="
             
             # Wait for backend to be healthy with more robust checking
             echo "=== Waiting for backend to be healthy ==="
             BACKEND_HEALTHY=false
-            for i in {1..60}; do
+            for i in {1..90}; do
               # Check if backend container is running first
               if docker-compose ps backend | grep -q "Up"; then
                 echo "Backend container is running..."
@@ -342,8 +312,8 @@ jobs:
                 echo "Backend container not running yet..."
               fi
               
-              echo "Backend not healthy yet, attempt ${i}/60..."
-              sleep 5
+              echo "Backend not healthy yet, attempt ${i}/90..."
+              sleep 7
             done
             
             if [ "$BACKEND_HEALTHY" = false ]; then

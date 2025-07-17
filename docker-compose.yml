@@ -37,6 +37,9 @@ services:
       NODE_ENV: production
       PORT: 3006
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-metalgest}
+      # Configurações específicas para Prisma com Alpine
+      PRISMA_CLI_BINARY_TARGETS: "linux-musl"
+      OPENSSL_CONF: /etc/ssl/
     ports:
       - "3006:3006"
     networks:
@@ -46,10 +49,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3006/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 45s
+      timeout: 15s
+      retries: 6
+      start_period: 90s
 
   nginx:
     image: nginx:1.25-alpine
