@@ -82,18 +82,36 @@ jobs:
           script: |
             cd /var/www/metalgest
             
+            # Set default values if secrets are not defined
+            DB_NAME="${{ secrets.DB_NAME }}"
+            DB_USER="${{ secrets.DB_USER }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"
+            
+            # Use defaults if secrets are empty
+            DB_NAME=${DB_NAME:-"metalgest"}
+            DB_USER=${DB_USER:-"postgres"}
+            DB_PASSWORD=${DB_PASSWORD:-"postgres123"}
+            JWT_SECRET=${JWT_SECRET:-"your-super-secret-jwt-key-change-in-production"}
+            JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-"your-super-secret-refresh-jwt-key-change-in-production"}
+            
             # Create environment file
+            echo "Creating .env file..."
             cat > .env << EOF
-            NODE_ENV=production
-            PORT=3006
-            API_VERSION=v1
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-            DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}
-            POSTGRES_DB=${{ secrets.DB_NAME }}
-            POSTGRES_USER=${{ secrets.DB_USER }}
-            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-            EOF
+NODE_ENV=production
+PORT=3006
+API_VERSION=v1
+JWT_SECRET=${JWT_SECRET}
+JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+POSTGRES_DB=${DB_NAME}
+POSTGRES_USER=${DB_USER}
+POSTGRES_PASSWORD=${DB_PASSWORD}
+EOF
+            
+            echo "Environment file created successfully"
+            echo "Database config: ${DB_USER}@db:5432/${DB_NAME}"
             
             # Update nginx config
             sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
