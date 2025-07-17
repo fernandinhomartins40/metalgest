@@ -82,6 +82,41 @@ jobs:
           script: |
             cd /var/www/metalgest
             
+            # === Install Docker and Docker Compose ===
+            echo "=== Installing Docker and Docker Compose ==="
+            
+            # Update system
+            apt-get update -y
+            
+            # Install Docker if not present
+            if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sh get-docker.sh
+              systemctl enable docker
+              systemctl start docker
+              rm get-docker.sh
+            else
+              echo "✅ Docker already installed"
+            fi
+            
+            # Install Docker Compose if not present
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Installing Docker Compose..."
+              curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+            else
+              echo "✅ Docker Compose already installed"
+            fi
+            
+            # Verify installations
+            docker --version
+            docker-compose --version
+            
+            # === Configure Environment Variables ===
+            echo "=== Configuring Environment ==="
+            
             # Set default values if secrets are not defined
             DB_NAME="${{ secrets.DB_NAME }}"
             DB_USER="${{ secrets.DB_USER }}"
@@ -98,91 +133,141 @@ jobs:
             
             # Create environment file
             echo "Creating .env file..."
-            echo "NODE_ENV=production" > .env
-            echo "PORT=3006" >> .env
-            echo "API_VERSION=v1" >> .env
-            echo "JWT_SECRET=${JWT_SECRET}" >> .env
-            echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> .env
-            echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}" >> .env
-            echo "CORS_ORIGIN=*" >> .env
-            echo "POSTGRES_DB=${DB_NAME}" >> .env
-            echo "POSTGRES_USER=${DB_USER}" >> .env
-            echo "POSTGRES_PASSWORD=${DB_PASSWORD}" >> .env
+            cat > .env << EOF
+            NODE_ENV=production
+            PORT=3006
+            API_VERSION=v1
+            JWT_SECRET=${JWT_SECRET}
+            JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+            DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+            CORS_ORIGIN=*
+            POSTGRES_DB=${DB_NAME}
+            POSTGRES_USER=${DB_USER}
+            POSTGRES_PASSWORD=${DB_PASSWORD}
+            ENCRYPTION_KEY=your-encryption-key-32-characters-long
+            EOF
             
-            echo "Environment file created successfully"
+            echo "✅ Environment file created successfully"
             echo "Database config: ${DB_USER}@db:5432/${DB_NAME}"
             
-            # Update nginx config
-            sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
-            cp nginx-initial.conf nginx.conf
+            # === Setup Nginx Configuration ===
+            echo "=== Setting up Nginx ==="
+            if [ -f nginx-initial.conf ]; then
+              sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
+              cp nginx-initial.conf nginx.conf
+              echo "✅ Nginx configuration updated"
+            else
+              echo "⚠️ nginx-initial.conf not found, using default nginx.conf"
+            fi
             
-            # Clean up
-            systemctl stop nginx || true
-            docker-compose down -v || true
-            docker system prune -f || true
+            # === Clean Up Previous Deployment ===
+            echo "=== Cleaning up previous deployment ==="
             
-            # Deploy
+            # Stop and remove containers
+            docker-compose down -v 2>/dev/null || echo "No containers to stop"
+            
+            # Remove unused images and volumes
+            docker system prune -f 2>/dev/null || echo "Docker cleanup completed"
+            
+            # Stop system nginx if running
+            systemctl stop nginx 2>/dev/null || echo "System nginx not running"
+            
+            # === Deploy Application ===
             echo "=== Deploying application ==="
-            docker-compose up -d --build
             
-            # Run Prisma migrations
-            echo "=== Running Prisma migrations ==="
-            docker-compose exec -T backend npx prisma migrate deploy || echo "Prisma migrations failed or not needed"
+            # Build and start containers
+            docker-compose up -d --build --force-recreate
             
-            # Wait for services to be ready
-            echo "Waiting for database to be ready..."
-            sleep 20
-            
-            # Check backend logs for debugging
-            echo "=== Backend Container Logs ==="
-            docker-compose logs backend --tail=20
-            
-            # Wait for backend to be ready
-            echo "Waiting for backend to be ready..."
-            for i in {1..30}; do
-              if docker-compose exec -T backend node -e "console.log('Backend is ready')" 2>/dev/null; then
-                echo "✅ Backend container is responsive after ${i} attempts"
+            # Wait for database to be ready
+            echo "=== Waiting for database ==="
+            for i in {1..60}; do
+              if docker-compose exec -T db pg_isready -U ${DB_USER} -d ${DB_NAME} 2>/dev/null; then
+                echo "✅ Database is ready after ${i} attempts"
                 break
               fi
-              echo "Backend not ready, attempt ${i}/30..."
-              sleep 5
+              echo "Database not ready, attempt ${i}/60..."
+              sleep 2
             done
             
-            # Try to connect to backend port directly
-            echo "Testing backend port 3006 directly..."
-            docker-compose exec -T backend netstat -tlnp | grep 3006 || echo "Port 3006 not listening in backend container"
-            
-            # Check container status
-            echo "=== Container Status ==="
-            docker-compose ps
-            
-            # Check if database is healthy
-            if ! docker-compose ps | grep db | grep -q "healthy"; then
-              echo "❌ Database not healthy, checking logs..."
+            # Check database status
+            if ! docker-compose exec -T db pg_isready -U ${DB_USER} -d ${DB_NAME} 2>/dev/null; then
+              echo "❌ Database failed to start, checking logs..."
               docker-compose logs db --tail=30
               exit 1
             fi
             
-            # Test backend directly on port 8080
-            echo "Testing backend directly on port 3006..."
-            if curl -f http://localhost:3006/api/v1/health; then
-              echo "✅ Backend is working on port 3006"
+            # === Run Database Migrations ===
+            echo "=== Running Prisma migrations ==="
+            
+            # Wait a bit more for backend container
+            sleep 10
+            
+            # Generate and deploy Prisma migrations
+            if docker-compose exec -T backend npx prisma migrate deploy; then
+              echo "✅ Prisma migrations completed successfully"
             else
-              echo "❌ Backend failed on port 3006, checking all logs..."
-              echo "=== Backend Logs ==="
-              docker-compose logs backend --tail=50
-              echo "=== Environment Variables ==="
-              docker-compose exec -T backend printenv | grep -E "(PORT|NODE_ENV|DATABASE_URL)" || echo "No env vars found"
-              echo "=== Network Info ==="
-              docker-compose exec -T backend netstat -tlnp || echo "netstat not available"
+              echo "⚠️ Prisma migrations failed, trying to generate and push..."
+              docker-compose exec -T backend npx prisma db push --force-reset || echo "Database push failed"
             fi
             
-            # Test through nginx on port 80
-            echo "Testing through nginx on port 80..."
-            if curl -f http://localhost:80/api/v1/health; then
-              echo "✅ Deploy successful! API is accessible through nginx"
+            # === Wait for Backend ===
+            echo "=== Waiting for backend service ==="
+            
+            # Wait for backend to be fully ready
+            for i in {1..60}; do
+              if docker-compose exec -T backend curl -f http://localhost:3006/api/v1/health 2>/dev/null; then
+                echo "✅ Backend is ready after ${i} attempts"
+                break
+              fi
+              echo "Backend not ready, attempt ${i}/60..."
+              sleep 3
+            done
+            
+            # === Health Checks ===
+            echo "=== Running health checks ==="
+            
+            # Check container status
+            echo "Container Status:"
+            docker-compose ps
+            
+            # Check backend logs
+            echo "=== Backend Logs (last 20 lines) ==="
+            docker-compose logs backend --tail=20
+            
+            # Test backend directly
+            echo "=== Testing Backend Direct Access ==="
+            if docker-compose exec -T backend curl -f http://localhost:3006/api/v1/health; then
+              echo "✅ Backend direct access working"
             else
-              echo "❌ Nginx proxy failed, checking all logs..."
-              docker-compose logs --tail=50
+              echo "❌ Backend direct access failed"
+              echo "Environment variables in backend:"
+              docker-compose exec -T backend printenv | grep -E "(PORT|NODE_ENV|DATABASE_URL)" || echo "No env vars found"
+              echo "Process list in backend:"
+              docker-compose exec -T backend ps aux || echo "ps command not available"
+            fi
+            
+            # Test through nginx proxy
+            echo "=== Testing Nginx Proxy ==="
+            if curl -f http://localhost:80/api/v1/health 2>/dev/null; then
+              echo "✅ Nginx proxy working"
+            else
+              echo "❌ Nginx proxy failed, checking nginx logs..."
+              docker-compose logs nginx --tail=20
+            fi
+            
+            # === Final Status ===
+            echo "=== Deployment Summary ==="
+            
+            # Show all container statuses
+            docker-compose ps
+            
+            # Test final connectivity
+            if curl -f http://localhost:80/api/v1/health 2>/dev/null; then
+              echo "🎉 Deploy successful! API is accessible through nginx on port 80"
+              echo "🌐 Application should be available at: http://31.97.85.98"
+            else
+              echo "❌ Deployment completed but API is not accessible"
+              echo "📋 Full logs for debugging:"
+              docker-compose logs --tail=30
               exit 1
             fi

@@ -37,7 +37,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./frontend/dist:/var/www/frontend
+      - ./dist:/var/www/frontend
       - certbot_certs:/etc/letsencrypt
       - certbot_www:/var/www/certbot
     networks:

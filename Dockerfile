@@ -1,6 +1,9 @@
 # Usa código já compilado do GitHub Actions
 FROM node:18-alpine
 
+# Instala curl para health checks
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 # Copia package.json, arquivos compilados e schema do Prisma
