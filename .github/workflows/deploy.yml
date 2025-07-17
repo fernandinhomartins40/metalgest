@@ -69,7 +69,7 @@ jobs:
           host: 82.25.69.57
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,frontend/dist,backend/dist"
+          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
 

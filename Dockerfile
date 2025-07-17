@@ -3,15 +3,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copia package.json e arquivos compilados do build job
+# Copia package.json, arquivos compilados e schema do Prisma
 COPY backend/package.json ./
 COPY backend/dist ./dist
+COPY backend/prisma ./prisma
 
-# Instala apenas dependências de produção
+# Instala apenas dependências de produção (module-alias já está no package.json)
 RUN npm install --only=production && npm cache clean --force
 
-# Instala module-alias para resolver paths @/
-RUN npm install module-alias
+# Gera o Prisma client
+RUN npx prisma generate
 
 # Expõe a porta 3006
 EXPOSE 3006
