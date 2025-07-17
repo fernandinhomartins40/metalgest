@@ -6,53 +6,9 @@ on:
       - main
 
 jobs:
-  port-check:
-    name: Check for Available Port
-    runs-on: ubuntu-latest
-    outputs:
-      APP_PORT: ${{ steps.get_port.outputs.APP_PORT }}
-
-    steps:
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
-
-      - name: Get available port from VPS
-        id: get_port
-        run: |
-          APP_PORT=$(sshpass -p "${{ secrets.VPS_PASSWORD }}" ssh -o StrictHostKeyChecking=no root@82.25.69.57 '
-            # Function to check if port is available
-            check_port() {
-              local port=$1
-              # Check if port is in use (listening)
-              if netstat -tuln | grep -q ":$port "; then
-                return 1  # Port is in use
-              fi
-              # Try to bind to port to double-check availability
-              if timeout 2 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then
-                return 1  # Port is in use
-              fi
-              return 0  # Port is available
-            }
-            
-            # Search for available port in range 3000-9999
-            for port in {3000..9999}; do
-              if check_port $port; then
-                echo $port
-                exit 0
-              fi
-            done
-            
-            # If no port found in range, error
-            echo "ERROR: No available ports found in range 3000-9999" >&2
-            exit 1
-          ')
-          echo "Found available port: $APP_PORT"
-          echo "APP_PORT=$APP_PORT" >> $GITHUB_OUTPUT
-
   build:
     name: Build Application
     runs-on: ubuntu-latest
-    needs: port-check
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,7 +44,7 @@ jobs:
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: [port-check, build]
+    needs: [build]
     steps:
       - name: Download Frontend Artifact
         uses: actions/download-artifact@v4
@@ -102,14 +58,20 @@ jobs:
           name: backend-dist
           path: backend/dist
 
+      - name: Checkout code for deploy files
+        uses: actions/checkout@v4
+        with:
+          path: source
+          
       - name: Transfer files to VPS
         uses: appleboy/scp-action@master
         with:
           host: 82.25.69.57
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "Dockerfile,docker-compose.yml,frontend/dist/*,backend/dist/*"
+          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,frontend/dist/*,backend/dist/*"
           target: "/var/www/metalgest"
+          strip_components: 1
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -120,10 +82,10 @@ jobs:
           script: |
             cd /var/www/metalgest
             
-            # Create environment file
+            # Create environment file with fixed port 3006
             echo "# Backend Environment Variables" > .env
             echo "NODE_ENV=production" >> .env
-            echo "PORT=${{ needs.port-check.outputs.APP_PORT }}" >> .env
+            echo "PORT=3006" >> .env
             echo "API_VERSION=v1" >> .env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
             echo "JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}" >> .env
@@ -134,9 +96,9 @@ jobs:
             echo "POSTGRES_USER=${{ secrets.DB_USER }}" >> .env
             echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             
-            # Update nginx configurations with actual port
-            sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx.conf
-            sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx-initial.conf
+            # Update nginx configurations with port 3006
+            sed -i "s/PORT_PLACEHOLDER/3006/g" nginx.conf
+            sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
             
             # Stop any existing nginx service that might conflict
             systemctl stop nginx || true
@@ -162,8 +124,8 @@ jobs:
               echo "SSL certificate generated successfully"
               
               # Restore full nginx config with SSL
-              cp nginx.conf.bak nginx.conf || git checkout nginx.conf
-              sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx.conf
+              cp nginx.conf.bak nginx.conf || cp source/nginx.conf nginx.conf
+              sed -i "s/PORT_PLACEHOLDER/3006/g" nginx.conf
               
               # Reload nginx to use SSL certificate
               docker-compose exec nginx nginx -s reload
@@ -208,4 +170,4 @@ jobs:
               exit 1
             fi
             
-            echo "Deploy successful! API is running on port ${{ needs.port-check.outputs.APP_PORT }} with SSL enabled"
+            echo "Deploy successful! API is running on port 3006 with SSL enabled"

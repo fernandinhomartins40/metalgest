@@ -9,7 +9,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "${PORT:-3001}:${PORT:-3001}"
+      - "3006:3006"
     networks:
       - app-network
     depends_on:
