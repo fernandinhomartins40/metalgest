@@ -72,6 +72,42 @@ jobs:
           source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
+          
+      - name: Ensure backend structure
+        uses: appleboy/ssh-action@master
+        with:
+          host: 31.97.85.98
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /var/www/metalgest
+            
+            # Verifica e cria estrutura do backend se necessário
+            echo "=== Verificando estrutura do backend ==="
+            ls -la
+            
+            # Verifica se backend/dist existe
+            if [ ! -d "backend/dist" ]; then
+              echo "⚠️ backend/dist não encontrado, criando estrutura..."
+              mkdir -p backend/dist
+              
+              # Se temos arquivos compilados na raiz, move para backend/
+              if [ -d "dist" ]; then
+                echo "Movendo dist para backend/"
+                mv dist backend/
+              fi
+            fi
+            
+            # Verifica se frontend/dist existe
+            if [ ! -d "dist" ] && [ -d "frontend/dist" ]; then
+              echo "Movendo frontend/dist para raiz"
+              mv frontend/dist .
+            fi
+            
+            echo "✅ Estrutura verificada:"
+            ls -la backend/ 2>/dev/null || echo "Backend folder not found"
+            ls -la backend/dist/ 2>/dev/null || echo "Backend dist not found"
+            ls -la dist/ 2>/dev/null || echo "Frontend dist not found"
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -175,99 +211,96 @@ jobs:
             # === Deploy Application ===
             echo "=== Deploying application ==="
             
-            # Build and start containers
-            docker-compose up -d --build --force-recreate
+            # Build and start containers (database first)
+            echo "Starting database..."
+            docker-compose up -d db
             
-            # Wait for database to be ready
+            # Wait for database using docker-compose health check
             echo "=== Waiting for database ==="
-            for i in {1..60}; do
-              if docker-compose exec -T db pg_isready -U ${DB_USER} -d ${DB_NAME} 2>/dev/null; then
-                echo "✅ Database is ready after ${i} attempts"
+            for i in {1..30}; do
+              if docker-compose ps db | grep -q "healthy"; then
+                echo "✅ Database is healthy after ${i} attempts"
                 break
               fi
-              echo "Database not ready, attempt ${i}/60..."
-              sleep 2
+              echo "Database not healthy yet, attempt ${i}/30..."
+              sleep 3
             done
             
-            # Check database status
-            if ! docker-compose exec -T db pg_isready -U ${DB_USER} -d ${DB_NAME} 2>/dev/null; then
+            # Verify database is really ready
+            if ! docker-compose ps db | grep -q "healthy"; then
               echo "❌ Database failed to start, checking logs..."
               docker-compose logs db --tail=30
               exit 1
             fi
             
+            # Now start backend
+            echo "Starting backend..."
+            docker-compose up -d --build backend
+            
             # === Run Database Migrations ===
             echo "=== Running Prisma migrations ==="
             
-            # Wait a bit more for backend container
-            sleep 10
+            # Wait for backend container to be running
+            sleep 15
             
             # Generate and deploy Prisma migrations
-            if docker-compose exec -T backend npx prisma migrate deploy; then
+            if docker-compose exec -T backend npx prisma migrate deploy 2>/dev/null; then
               echo "✅ Prisma migrations completed successfully"
             else
-              echo "⚠️ Prisma migrations failed, trying to generate and push..."
-              docker-compose exec -T backend npx prisma db push --force-reset || echo "Database push failed"
+              echo "⚠️ Prisma migrations failed, trying db push..."
+              if docker-compose exec -T backend npx prisma db push --force-reset 2>/dev/null; then
+                echo "✅ Database schema pushed successfully"
+              else
+                echo "❌ Database migration failed completely"
+                docker-compose logs backend --tail=20
+              fi
             fi
             
-            # === Wait for Backend ===
-            echo "=== Waiting for backend service ==="
-            
-            # Wait for backend to be fully ready
-            for i in {1..60}; do
-              if docker-compose exec -T backend curl -f http://localhost:3006/api/v1/health 2>/dev/null; then
-                echo "✅ Backend is ready after ${i} attempts"
+            # Wait for backend to be healthy
+            echo "=== Waiting for backend to be healthy ==="
+            for i in {1..40}; do
+              if docker-compose ps backend | grep -q "healthy"; then
+                echo "✅ Backend is healthy after ${i} attempts"
                 break
               fi
-              echo "Backend not ready, attempt ${i}/60..."
-              sleep 3
+              echo "Backend not healthy yet, attempt ${i}/40..."
+              sleep 5
             done
             
-            # === Health Checks ===
-            echo "=== Running health checks ==="
+            # Finally start nginx
+            echo "Starting nginx..."
+            docker-compose up -d nginx
             
-            # Check container status
+            # === Final Health Checks ===
+            echo "=== Final Health Checks ==="
+            
+            # Wait a bit for nginx to be ready
+            sleep 10
+            
+            # Show final container status
             echo "Container Status:"
             docker-compose ps
             
-            # Check backend logs
-            echo "=== Backend Logs (last 20 lines) ==="
-            docker-compose logs backend --tail=20
+            # Test application through nginx
+            echo "=== Testing Application ==="
             
-            # Test backend directly
-            echo "=== Testing Backend Direct Access ==="
-            if docker-compose exec -T backend curl -f http://localhost:3006/api/v1/health; then
-              echo "✅ Backend direct access working"
-            else
-              echo "❌ Backend direct access failed"
-              echo "Environment variables in backend:"
-              docker-compose exec -T backend printenv | grep -E "(PORT|NODE_ENV|DATABASE_URL)" || echo "No env vars found"
-              echo "Process list in backend:"
-              docker-compose exec -T backend ps aux || echo "ps command not available"
-            fi
-            
-            # Test through nginx proxy
-            echo "=== Testing Nginx Proxy ==="
+            # Try multiple endpoints to ensure everything works
             if curl -f http://localhost:80/api/v1/health 2>/dev/null; then
-              echo "✅ Nginx proxy working"
+              echo "✅ API Health Check - OK"
             else
-              echo "❌ Nginx proxy failed, checking nginx logs..."
-              docker-compose logs nginx --tail=20
-            fi
-            
-            # === Final Status ===
-            echo "=== Deployment Summary ==="
-            
-            # Show all container statuses
-            docker-compose ps
-            
-            # Test final connectivity
-            if curl -f http://localhost:80/api/v1/health 2>/dev/null; then
-              echo "🎉 Deploy successful! API is accessible through nginx on port 80"
-              echo "🌐 Application should be available at: http://31.97.85.98"
-            else
-              echo "❌ Deployment completed but API is not accessible"
-              echo "📋 Full logs for debugging:"
-              docker-compose logs --tail=30
+              echo "❌ API Health Check - FAILED"
+              echo "Backend logs:"
+              docker-compose logs backend --tail=10
+              echo "Nginx logs:"
+              docker-compose logs nginx --tail=10
               exit 1
             fi
+            
+            # Final success message
+            echo ""
+            echo "🎉 DEPLOY SUCCESSFUL!"
+            echo "🌐 Application is available at: http://31.97.85.98"
+            echo "📊 API endpoint: http://31.97.85.98/api/v1/health"
+            echo ""
+            echo "📋 Services Status:"
+            docker-compose ps --format "table {{.Name}}\t{{.State}}\t{{.Status}}"

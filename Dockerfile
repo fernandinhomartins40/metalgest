@@ -1,4 +1,4 @@
-# Usa código já compilado do GitHub Actions
+# Build usando arquivos transferidos pelo GitHub Actions
 FROM node:18-alpine
 
 # Instala curl para health checks
@@ -6,8 +6,8 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copia package.json, arquivos compilados e schema do Prisma
-COPY backend/package.json ./
+# Copia todos os arquivos do backend transferidos pelo Actions
+COPY backend/package.json ./package.json
 COPY backend/dist ./dist
 COPY backend/prisma ./prisma
 
@@ -17,8 +17,20 @@ RUN npm install --only=production && npm cache clean --force
 # Gera o Prisma client
 RUN npx prisma generate
 
+# Cria usuário não-root para segurança
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Muda ownership dos arquivos
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
 # Expõe a porta 3006
 EXPOSE 3006
+
+# Health check interno
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3006/api/v1/health || exit 1
 
 # Comando para iniciar a aplicação
 CMD ["node", "dist/index.js"]
