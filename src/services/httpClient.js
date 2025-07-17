@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (
   // Se estiver em produção, use o próprio domínio com HTTPS
   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173'
     ? `${window.location.protocol}//${window.location.host}/api/v1`
-    : 'http://localhost:8080/api/v1'
+    : 'http://localhost:3001/api/v1'
 );
 
 // Token management

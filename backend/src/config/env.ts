@@ -20,7 +20,7 @@ interface EnvConfig {
   JWT_REFRESH_EXPIRES_IN: string;
 
   // CORS
-  CORS_ORIGIN: string;
+  CORS_ORIGIN: string | string[];
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: number;
@@ -84,7 +84,7 @@ export const env: EnvConfig = {
   JWT_REFRESH_EXPIRES_IN: getEnvVar('JWT_REFRESH_EXPIRES_IN', '7d'),
 
   // CORS
-  CORS_ORIGIN: getEnvVar('CORS_ORIGIN', 'http://localhost:5173'),
+  CORS_ORIGIN: getEnvVar('CORS_ORIGIN', 'http://localhost:5173').split(',').map(origin => origin.trim()),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000),
