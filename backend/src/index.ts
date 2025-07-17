@@ -1,10 +1,13 @@
 import app from './app';
 import { env } from './config/env';
 import { logger } from './config/logger';
+import { prisma } from './config/database';
 
 const startServer = async () => {
   try {
-    logger.info('Starting server...');
+    // Test database connection
+    await prisma.$connect();
+    logger.info('Database connected successfully');
 
     // Start server
     const server = app.listen(env.PORT, () => {
@@ -25,6 +28,7 @@ const startServer = async () => {
       logger.info('SIGTERM received, shutting down gracefully');
       server.close(() => {
         logger.info('Server closed');
+        prisma.$disconnect();
         process.exit(0);
       });
     });
@@ -33,6 +37,7 @@ const startServer = async () => {
       logger.info('SIGINT received, shutting down gracefully');
       server.close(() => {
         logger.info('Server closed');
+        prisma.$disconnect();
         process.exit(0);
       });
     });

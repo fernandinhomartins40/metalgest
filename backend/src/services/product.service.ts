@@ -1,13 +1,13 @@
-import { prisma } from '@/config/database';
-import { AppError } from '@/middleware/errorHandler';
-import { PaginationUtil } from '@/utils/pagination';
+import { prisma } from '../config/database';
+import { AppError } from '../middleware/errorHandler';
+import { PaginationUtil } from '../utils/pagination';
 import { 
   CreateProductRequest, 
   UpdateProductRequest, 
   ProductFilters,
   PaginationParams,
   PaginatedResponse 
-} from '@/types';
+} from '../types';
 
 export class ProductService {
   async create(userId: string, data: CreateProductRequest): Promise<any> {
@@ -165,7 +165,7 @@ export class ProductService {
       distinct: ['category'],
     });
 
-    return categories.map(c => c.category);
+    return categories.map((c: any) => c.category);
   }
 
   async updateStock(id: string, userId: string, quantity: number): Promise<any> {
@@ -204,7 +204,7 @@ export class ProductService {
     }
 
     const updatePromises = updates.map(update => {
-      const product = products.find(p => p.id === update.id);
+      const product = products.find((p: any) => p.id === update.id);
       const newStock = product!.stock + update.quantity;
 
       if (newStock < 0) {
