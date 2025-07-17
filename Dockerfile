@@ -10,6 +10,9 @@ COPY backend/dist ./dist
 # Instala apenas dependências de produção
 RUN npm install --only=production && npm cache clean --force
 
+# Instala module-alias para resolver paths @/
+RUN npm install module-alias
+
 # Expõe a porta 3006
 EXPOSE 3006
 
