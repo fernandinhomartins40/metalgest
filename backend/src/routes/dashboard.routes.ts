@@ -10,7 +10,7 @@ router.use(authenticate);
 
 router.get('/stats',
   auditMiddleware.custom('get_stats', 'dashboard'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     const stats = {
       totalQuotes: 0,
       totalClients: 0,
@@ -27,7 +27,7 @@ router.get('/stats',
 
 router.get('/charts',
   auditMiddleware.custom('get_charts', 'dashboard'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     const charts = {
       revenueChart: {
         labels: [],
@@ -44,14 +44,14 @@ router.get('/charts',
 
 router.get('/recent-quotes',
   auditMiddleware.custom('get_recent_quotes', 'dashboard'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, [], 'Recent quotes retrieved successfully');
   })
 );
 
 router.get('/performance',
   auditMiddleware.custom('get_performance', 'dashboard'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Performance metrics retrieved successfully');
   })
 );

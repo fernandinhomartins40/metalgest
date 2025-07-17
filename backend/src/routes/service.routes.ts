@@ -10,35 +10,35 @@ router.use(authenticate);
 
 router.get('/', 
   auditMiddleware.list('services'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, [], 'Services retrieved successfully');
   })
 );
 
 router.post('/',
   auditMiddleware.create('services'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Service created successfully', 201);
   })
 );
 
 router.get('/:id',
   auditMiddleware.read('services'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Service retrieved successfully');
   })
 );
 
 router.put('/:id',
   auditMiddleware.update('services'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Service updated successfully');
   })
 );
 
 router.delete('/:id',
   auditMiddleware.delete('services'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Service deleted successfully');
   })
 );

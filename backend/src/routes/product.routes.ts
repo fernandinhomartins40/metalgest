@@ -12,7 +12,7 @@ router.use(authenticate);
 // Get all products
 router.get('/', 
   auditMiddleware.list('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, [], 'Products retrieved successfully');
   })
 );
@@ -20,7 +20,7 @@ router.get('/',
 // Create product
 router.post('/',
   auditMiddleware.create('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Product created successfully', 201);
   })
 );
@@ -28,7 +28,7 @@ router.post('/',
 // Get product by ID
 router.get('/:id',
   auditMiddleware.read('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Product retrieved successfully');
   })
 );
@@ -36,7 +36,7 @@ router.get('/:id',
 // Update product
 router.put('/:id',
   auditMiddleware.update('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Product updated successfully');
   })
 );
@@ -44,7 +44,7 @@ router.put('/:id',
 // Delete product
 router.delete('/:id',
   auditMiddleware.delete('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Product deleted successfully');
   })
 );
@@ -52,7 +52,7 @@ router.delete('/:id',
 // Search products
 router.get('/search',
   auditMiddleware.search('products'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, [], 'Products search completed');
   })
 );

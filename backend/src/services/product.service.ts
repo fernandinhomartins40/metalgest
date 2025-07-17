@@ -46,7 +46,7 @@ export class ProductService {
     }
 
     if (filters.lowStock) {
-      where.stock = { lte: prisma.product.fields.minStock };
+      where.stock = { lte: (prisma.product.fields as any).minStock };
     }
 
     if (filters.active !== undefined) {

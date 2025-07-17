@@ -7,19 +7,19 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: ApiError;
-  timestamp: string;
-}
-
 export interface ApiError {
   code: string;
   message: string;
   details?: any;
-  stack?: string;
+  stack?: string | undefined;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T | null | undefined;
+  message?: string | null | undefined;
+  error?: ApiError;
+  timestamp: string;
 }
 
 // Pagination Types

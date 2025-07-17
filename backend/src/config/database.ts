@@ -25,17 +25,17 @@ export const prisma = global.__prisma || new PrismaClient({
 
 // Log database queries in development
 if (process.env.NODE_ENV === 'development') {
-  prisma.$on('query', (e) => {
+  (prisma.$on as any)('query', (e: any) => {
     logger.debug(`Query: ${e.query}`);
     logger.debug(`Duration: ${e.duration}ms`);
   });
 }
 
-prisma.$on('error', (e) => {
+(prisma.$on as any)('error', (e: any) => {
   logger.error(`Database error: ${e.message}`);
 });
 
-prisma.$on('warn', (e) => {
+(prisma.$on as any)('warn', (e: any) => {
   logger.warn(`Database warning: ${e.message}`);
 });
 

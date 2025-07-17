@@ -58,7 +58,7 @@ const logAuditEntry = async (
         module,
         details,
         ipAddress: getClientIP(req),
-        userAgent: req.get('User-Agent'),
+        userAgent: req.get('User-Agent') || null,
       },
     });
   } catch (error) {

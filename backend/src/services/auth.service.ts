@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class AuthService {
   async login(loginData: LoginRequest): Promise<{ user: any; tokens: AuthTokens }> {
-    const { email, password, rememberMe = false, keepConnected = false } = loginData;
+    const { email, password, rememberMe: _rememberMe = false, keepConnected = false } = loginData;
 
     // Find user by email
     const user = await prisma.user.findUnique({
@@ -153,7 +153,7 @@ export class AuthService {
 
     // Check if refresh token exists in database
     const storedToken = await prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
+      where: { token: refreshToken, userId: payload.userId },
       include: { user: true },
     });
 
@@ -167,9 +167,9 @@ export class AuthService {
 
     // Generate new tokens
     const newPayload: JwtPayload = {
-      userId: storedToken.user.id,
-      email: storedToken.user.email,
-      role: storedToken.user.role,
+      userId: payload.userId,
+      email: payload.email,
+      role: payload.role,
     };
 
     const tokens = JwtUtil.generateTokens(newPayload);

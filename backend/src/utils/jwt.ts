@@ -1,18 +1,18 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { env } from '@/config/env';
 import { JwtPayload, AuthTokens } from '@/types';
 
 export class JwtUtil {
   static generateAccessToken(payload: JwtPayload): string {
-    return jwt.sign(payload, env.JWT_SECRET, {
+    return jwt.sign(payload as object, env.JWT_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN,
-    });
+    } as SignOptions);
   }
 
   static generateRefreshToken(payload: JwtPayload): string {
-    return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+    return jwt.sign(payload as object, env.JWT_REFRESH_SECRET as string, {
       expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-    });
+    } as SignOptions);
   }
 
   static generateTokens(payload: JwtPayload): AuthTokens {

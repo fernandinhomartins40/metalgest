@@ -7,7 +7,7 @@ import { env } from '@/config/env';
 const router = Router();
 
 router.get('/',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, {
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -19,7 +19,7 @@ router.get('/',
 );
 
 router.get('/detailed',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     const startTime = Date.now();
     
     try {

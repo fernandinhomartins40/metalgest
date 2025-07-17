@@ -10,42 +10,42 @@ router.use(authenticate);
 
 router.get('/company',
   auditMiddleware.custom('get_company_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Company settings retrieved successfully');
   })
 );
 
 router.put('/company',
   auditMiddleware.custom('update_company_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Company settings updated successfully');
   })
 );
 
 router.get('/system',
   auditMiddleware.custom('get_system_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'System settings retrieved successfully');
   })
 );
 
 router.put('/system',
   auditMiddleware.custom('update_system_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'System settings updated successfully');
   })
 );
 
 router.get('/notifications',
   auditMiddleware.custom('get_notification_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Notification settings retrieved successfully');
   })
 );
 
 router.put('/notifications',
   auditMiddleware.custom('update_notification_settings', 'settings'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'Notification settings updated successfully');
   })
 );

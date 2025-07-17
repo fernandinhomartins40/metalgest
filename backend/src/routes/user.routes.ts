@@ -13,7 +13,7 @@ router.use(authenticate);
 router.get('/', 
   authorize(['ADMIN']),
   auditMiddleware.list('users'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, [], 'Users retrieved successfully');
   })
 );
@@ -22,7 +22,7 @@ router.get('/',
 router.post('/',
   authorize(['ADMIN']),
   auditMiddleware.create('users'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'User created successfully', 201);
   })
 );
@@ -30,7 +30,7 @@ router.post('/',
 // Get user by ID
 router.get('/:id',
   auditMiddleware.read('users'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'User retrieved successfully');
   })
 );
@@ -39,7 +39,7 @@ router.get('/:id',
 router.put('/:id',
   authorize(['ADMIN']),
   auditMiddleware.update('users'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'User updated successfully');
   })
 );
@@ -48,7 +48,7 @@ router.put('/:id',
 router.delete('/:id',
   authorize(['ADMIN']),
   auditMiddleware.delete('users'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req: import('express').Request, res: import('express').Response, _next: import('express').NextFunction) => {
     ResponseUtil.success(res, null, 'User deleted successfully');
   })
 );

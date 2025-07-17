@@ -9,7 +9,7 @@ export const generalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  handler: (_, res) => {
     ResponseUtil.tooManyRequests(res, 'Too many requests');
   },
 });
@@ -22,7 +22,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
-  handler: (req, res) => {
+  handler: (_, res) => {
     ResponseUtil.tooManyRequests(
       res,
       'Too many authentication attempts, please try again later'
@@ -37,7 +37,7 @@ export const passwordResetLimiter = rateLimit({
   message: 'Too many password reset attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  handler: (_, res) => {
     ResponseUtil.tooManyRequests(
       res,
       'Too many password reset attempts, please try again later'
@@ -52,7 +52,7 @@ export const uploadLimiter = rateLimit({
   message: 'Too many file uploads, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  handler: (_, res) => {
     ResponseUtil.tooManyRequests(
       res,
       'Too many file uploads, please try again later'
@@ -67,7 +67,7 @@ export const apiLimiter = rateLimit({
   message: 'Too many API requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  handler: (_, res) => {
     ResponseUtil.tooManyRequests(res, 'Too many API requests');
   },
 });

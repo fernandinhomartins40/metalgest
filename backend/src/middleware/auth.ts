@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@/types';
 import { JwtUtil } from '@/utils/jwt';
 import { ResponseUtil } from '@/utils/response';
@@ -23,15 +23,6 @@ export const authenticate = async (
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        updatedAt: true,
-      },
     });
 
     if (!user) {
@@ -70,7 +61,7 @@ export const authorize = (roles: string[]) => {
 
 export const optionalAuth = async (
   req: AuthenticatedRequest,
-  res: Response,
+  _: Response,
   next: NextFunction
 ) => {
   try {
@@ -81,15 +72,6 @@ export const optionalAuth = async (
       
       const user = await prisma.user.findUnique({
         where: { id: payload.userId },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-        },
       });
 
       if (user && user.active) {
