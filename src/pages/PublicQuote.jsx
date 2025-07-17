@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from "react"
 import { useParams } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
-import { Loading } from "@/components/ui/loading"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { useToast } from "../components/ui/use-toast"
+import { Loading } from "../components/ui/loading"
 import { FileText, CheckCircle, XCircle } from "lucide-react"
-import { api } from "@/services/api"
-import { pdf } from "@/lib/pdf"
+import { api } from "../services/api"
+import { pdf } from "../lib/pdf"
 
 function PublicQuote() {
   const { token } = useParams()

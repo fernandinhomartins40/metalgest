@@ -2,7 +2,7 @@
 import React from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { Button } from "../components/ui/button"
 import { ArrowRight, Factory, Shield, BarChart3 } from "lucide-react"
 
 function Landing() {

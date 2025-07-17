@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from "react"
 import { Navigate, useLocation } from "react-router-dom"
-import { auth } from "@/services/auth"
-import { storage } from "@/utils/storage"
-import { permissions } from "@/lib/permissions"
-import { Loading } from "@/components/ui/loading"
-import { useToast } from "@/components/ui/use-toast"
+import { auth } from "../../services/auth"
+import { storage } from "../../utils/storage"
+import { permissions } from "../../lib/permissions"
+import { Loading } from "../ui/loading"
+import { useToast } from "../ui/use-toast"
 
 function ProtectedRoute({ children, requiredModule }) {
   const [loading, setLoading] = useState(true)

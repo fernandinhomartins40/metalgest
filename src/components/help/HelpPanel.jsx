@@ -1,7 +1,7 @@
 
 import React from "react"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
+import { Button } from "../ui/button"
 import { X, ExternalLink, HelpCircle } from "lucide-react"
 import { useLocation } from "react-router-dom"
 

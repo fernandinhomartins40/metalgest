@@ -2,7 +2,7 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
+import { Button } from "../components/ui/button"
 import { ArrowRight, Settings, Users, BarChart2, Package } from "lucide-react"
 
 function Home() {

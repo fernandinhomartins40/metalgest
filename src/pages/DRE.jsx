@@ -1,15 +1,15 @@
 
 import React from "react"
 import { format } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
-import { useApi } from "@/hooks/useApi"
-import { api } from "@/services/api"
-import { exportUtils } from "@/lib/export"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card"
+import { useToast } from "../components/ui/use-toast"
+import { useApi } from "../hooks/useApi"
+import { api } from "../services/api"
+import { exportUtils } from "../lib/export"
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react"
-import DREHeader from "@/components/dre/DREHeader"
-import DREResultCard from "@/components/dre/DREResultCard"
-import DRECharts from "@/components/dre/DRECharts"
+import DREHeader from "../components/dre/DREHeader"
+import DREResultCard from "../components/dre/DREResultCard"
+import DRECharts from "../components/dre/DRECharts"
 
 function DRE() {
   const { toast } = useToast()

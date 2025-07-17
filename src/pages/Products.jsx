@@ -1,14 +1,14 @@
 
 import React from "react"
 import { format } from "date-fns"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
-import { Loading } from "@/components/ui/loading"
-import { useApi } from "@/hooks/useApi"
-import { api } from "@/services/api"
-import { ProductForm } from "@/components/products/ProductForm"
-import { ProductList } from "@/components/products/ProductList"
-import { ProductDashboard } from "@/components/products/ProductDashboard"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { useToast } from "../components/ui/use-toast"
+import { Loading } from "../components/ui/loading"
+import { useApi } from "../hooks/useApi"
+import { api } from "../services/api"
+import { ProductForm } from "../components/products/ProductForm"
+import { ProductList } from "../components/products/ProductList"
+import { ProductDashboard } from "../components/products/ProductDashboard"
 
 function Products() {
   const { toast } = useToast()

@@ -1,6 +1,6 @@
 
 import React from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "../ui/button"
 import { Calendar, Download } from "lucide-react"
 
 function DREHeader({ period, setPeriod, handleExport }) {

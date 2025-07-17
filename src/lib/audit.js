@@ -1,4 +1,4 @@
-import { apiClient } from '@/services/httpClient';
+import { apiClient } from '../services/httpClient';
 
 // Audit helper functions
 export const audit = {

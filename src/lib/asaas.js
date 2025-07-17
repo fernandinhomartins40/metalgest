@@ -1,5 +1,5 @@
 
-import { api } from "@/services/api"
+import { api } from "../services/api"
 
 const ASAAS_API_URL = "https://api.asaas.com/v3"
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY

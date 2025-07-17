@@ -1,10 +1,10 @@
 
 import React from "react"
 import { NavLink } from "react-router-dom"
-import { cn } from "@/utils/utils.js"
+import { cn } from "../../utils/utils.js"
 import { motion } from "framer-motion"
-import { permissions } from "@/lib/permissions"
-import { useUser } from "@/contexts/UserContext"
+import { permissions } from "../../lib/permissions"
+import { useUser } from "../../contexts/UserContext"
 import {
   LayoutDashboard,
   Users,

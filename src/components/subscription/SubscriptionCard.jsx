@@ -1,13 +1,13 @@
 
 import React from "react"
 import { motion } from "framer-motion"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../ui/card"
+import { Button } from "../ui/button"
+import { useToast } from "../ui/use-toast"
 import { Crown, Check, AlertTriangle } from "lucide-react"
-import { mercadopago } from "@/lib/mercadopago"
-import { auth } from "@/services/auth"
-import { api } from "@/services/api"
+import { mercadopago } from "../../lib/mercadopago"
+import { auth } from "../../services/auth"
+import { api } from "../../services/api"
 
 function SubscriptionCard() {
   const [loading, setLoading] = React.useState(false)

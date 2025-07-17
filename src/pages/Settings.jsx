@@ -5,12 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import ReactQuill from "react-quill"
 import "react-quill/dist/quill.snow.css"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
-import { useApi } from "@/hooks/useApi"
-import { api } from "@/services/api"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { Button } from "../components/ui/button"
+import { useToast } from "../components/ui/use-toast"
+import { useApi } from "../hooks/useApi"
+import { api } from "../services/api"
 import {
   Building2,
   Settings as SettingsIcon,

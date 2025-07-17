@@ -1,26 +1,26 @@
 
 import React, { Suspense } from "react"
 import { Routes, Route } from "react-router-dom"
-import Layout from "@/components/layout/Layout"
-import { Loading } from "@/components/ui/loading"
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import { permissions } from "@/lib/permissions"
+import Layout from "./components/layout/Layout"
+import { Loading } from "./components/ui/loading"
+import ProtectedRoute from "./components/auth/ProtectedRoute"
+import { permissions } from "./lib/permissions"
 
 // Lazy loaded components
-const Home = React.lazy(() => import("@/pages/Home"))
-const Dashboard = React.lazy(() => import("@/pages/Dashboard"))
-const Clients = React.lazy(() => import("@/pages/Clients"))
-const Quotes = React.lazy(() => import("@/pages/Quotes"))
-const Production = React.lazy(() => import("@/pages/Production"))
-const Products = React.lazy(() => import("@/pages/Products"))
-const Services = React.lazy(() => import("@/pages/Services"))
-const Financial = React.lazy(() => import("@/pages/Financial"))
-const DRE = React.lazy(() => import("@/pages/DRE"))
-const Users = React.lazy(() => import("@/pages/Users"))
-const Settings = React.lazy(() => import("@/pages/Settings"))
-const Login = React.lazy(() => import("@/pages/Login"))
-const Register = React.lazy(() => import("@/pages/Register"))
-const PublicQuote = React.lazy(() => import("@/pages/PublicQuote"))
+const Home = React.lazy(() => import("./pages/Home"))
+const Dashboard = React.lazy(() => import("./pages/Dashboard"))
+const Clients = React.lazy(() => import("./pages/Clients"))
+const Quotes = React.lazy(() => import("./pages/Quotes"))
+const Production = React.lazy(() => import("./pages/Production"))
+const Products = React.lazy(() => import("./pages/Products"))
+const Services = React.lazy(() => import("./pages/Services"))
+const Financial = React.lazy(() => import("./pages/Financial"))
+const DRE = React.lazy(() => import("./pages/DRE"))
+const Users = React.lazy(() => import("./pages/Users"))
+const Settings = React.lazy(() => import("./pages/Settings"))
+const Login = React.lazy(() => import("./pages/Login"))
+const Register = React.lazy(() => import("./pages/Register"))
+const PublicQuote = React.lazy(() => import("./pages/PublicQuote"))
 
 function App() {
   return (

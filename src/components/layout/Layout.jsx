@@ -1,12 +1,12 @@
 
 import React from "react"
 import { Outlet } from "react-router-dom"
-import Sidebar from "@/components/layout/Sidebar"
-import Navbar from "@/components/layout/Navbar"
-import OnboardingModal from "@/components/onboarding/OnboardingModal"
-import HelpPanel from "@/components/help/HelpPanel"
-import { auth } from "@/services/auth"
-import { api } from "@/services/api"
+import Sidebar from "./Sidebar"
+import Navbar from "./Navbar"
+import OnboardingModal from "../onboarding/OnboardingModal"
+import HelpPanel from "../help/HelpPanel"
+import { auth } from "../../services/auth"
+import { api } from "../../services/api"
 
 function Layout() {
   const [showOnboarding, setShowOnboarding] = React.useState(false)

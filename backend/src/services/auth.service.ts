@@ -109,7 +109,8 @@ export class AuthService {
         name,
         email,
         password: hashedPassword,
-        emailVerificationToken: uuidv4(),
+        emailVerified: true, // Auto-verify email for testing
+        emailVerificationToken: null,
       },
       select: {
         id: true,

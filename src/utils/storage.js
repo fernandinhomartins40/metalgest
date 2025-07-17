@@ -1,5 +1,5 @@
 
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "../components/ui/use-toast"
 
 const STORAGE_PREFIX = "metalgest_"
 

@@ -1,5 +1,5 @@
 import { apiClient, TokenManager } from './httpClient';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "../components/ui/use-toast";
 
 // Storage keys
 const STORAGE_KEYS = {

@@ -3,11 +3,11 @@ import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { motion } from "framer-motion"
-import { useToast } from "@/components/ui/use-toast"
-import { Button } from "@/components/ui/button"
-import { auth } from "@/services/auth.js"
+import { useToast } from "../components/ui/use-toast"
+import { Button } from "../components/ui/button"
+import { auth } from "../services/auth.js"
 import { ArrowRight, LogIn, KeyRound } from "lucide-react"
-import PasswordInput from "@/components/auth/PasswordInput"
+import PasswordInput from "../components/auth/PasswordInput"
 
 function Login() {
   const navigate = useNavigate()

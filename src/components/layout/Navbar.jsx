@@ -2,10 +2,10 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
 import { Bell, Search, LogOut, HelpCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "../ui/button"
 import { motion } from "framer-motion"
-import { auth } from "@/services/auth.js"
-import { useToast } from "@/components/ui/use-toast"
+import { auth } from "../../services/auth.js"
+import { useToast } from "../ui/use-toast"
 
 function Navbar({ onHelpClick }) {
   const navigate = useNavigate()

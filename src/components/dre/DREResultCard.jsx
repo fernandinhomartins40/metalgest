@@ -1,7 +1,7 @@
 
 import React from "react"
 import { format } from "date-fns"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent } from "../ui/card"
 import { TrendingUp, TrendingDown } from "lucide-react"
 
 function DREResultCard({ lucroLiquido }) {

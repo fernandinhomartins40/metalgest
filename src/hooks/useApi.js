@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "../components/ui/use-toast"
 
 export function useApi(apiFunction) {
   const [loading, setLoading] = useState(false)

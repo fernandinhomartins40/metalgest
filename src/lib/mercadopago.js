@@ -1,5 +1,5 @@
 
-import { api } from "@/services/api"
+import { api } from "../services/api"
 
 const MP_USER_ID = "264122170"
 const MP_APP_ID = "2886237981414328"

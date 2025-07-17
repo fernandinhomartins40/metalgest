@@ -1,4 +1,4 @@
-import { cn } from '@/utils/utils.js';
+import { cn } from '../../utils/utils.js';
 import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';
 import React from 'react';

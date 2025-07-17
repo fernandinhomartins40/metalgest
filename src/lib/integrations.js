@@ -1,7 +1,7 @@
 
-import { storage } from "@/utils/storage.js"
-import { api } from "@/services/api"
-import { useToast } from "@/components/ui/use-toast"
+import { storage } from "../utils/storage.js"
+import { api } from "../services/api"
+import { useToast } from "../components/ui/use-toast"
 
 export const integrations = {
   // Orçamento → Produção

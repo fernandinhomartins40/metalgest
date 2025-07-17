@@ -1,10 +1,10 @@
 
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
-import { auth } from "@/services/auth"
-import { api } from "@/services/api"
+import { Button } from "../ui/button"
+import { useToast } from "../ui/use-toast"
+import { auth } from "../../services/auth"
+import { api } from "../../services/api"
 import {
   FileText,
   Users,
