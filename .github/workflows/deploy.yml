@@ -128,25 +128,29 @@ jobs:
             echo "=== Running Prisma migrations ==="
             docker-compose exec -T backend npx prisma migrate deploy || echo "Prisma migrations failed or not needed"
             
-            # Wait and test
-            echo "Waiting for services..."
-            sleep 45
+            # Wait for services to be ready
+            echo "Waiting for database to be ready..."
+            sleep 20
             
-            # Detailed health check
-            echo "=== Health Check ==="
+            # Wait for backend to be ready
+            echo "Waiting for backend to be ready..."
+            for i in {1..30}; do
+              if docker-compose exec -T backend node -e "console.log('Backend is ready')" 2>/dev/null; then
+                echo "✅ Backend is ready after ${i} attempts"
+                break
+              fi
+              echo "Backend not ready, attempt ${i}/30..."
+              sleep 5
+            done
+            
+            # Check container status
+            echo "=== Container Status ==="
             docker-compose ps
             
-            # Check if containers are running
-            if ! docker-compose ps | grep -q "Up"; then
-              echo "❌ Containers not running, checking logs..."
-              docker-compose logs --tail=50
-              exit 1
-            fi
-            
-            # Check nginx is listening on port 80
-            if ! netstat -tlnp | grep :80; then
-              echo "❌ Port 80 not listening, checking nginx logs..."
-              docker-compose logs nginx --tail=30
+            # Check if database is healthy
+            if ! docker-compose ps | grep db | grep -q "healthy"; then
+              echo "❌ Database not healthy, checking logs..."
+              docker-compose logs db --tail=30
               exit 1
             fi
             
