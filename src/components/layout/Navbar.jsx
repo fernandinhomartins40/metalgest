@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { Bell, Search, LogOut, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
-import { auth } from "@/lib/auth"
+import { auth } from "@/services/auth.js"
 import { useToast } from "@/components/ui/use-toast"
 
 function Navbar({ onHelpClick }) {

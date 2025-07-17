@@ -1,7 +1,7 @@
 
 import React from "react"
 import { Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils.js"
 
 export function Loading({ className, size = "default", fullScreen = false }) {
   const sizeClasses = {

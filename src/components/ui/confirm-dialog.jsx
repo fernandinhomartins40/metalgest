@@ -2,7 +2,7 @@
 import React from "react"
 import * as AlertDialog from "@radix-ui/react-alert-dialog"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils.js"
 
 export function ConfirmDialog({
   open,

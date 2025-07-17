@@ -1,5 +1,5 @@
 
-import { storage } from "@/lib/storage"
+import { storage } from "@/utils/storage.js"
 import { api } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
 

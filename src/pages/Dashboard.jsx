@@ -1,6 +1,6 @@
 
 import React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils.js"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import {
