@@ -69,7 +69,7 @@ jobs:
           host: 82.25.69.57
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,frontend/dist,backend/dist"
+          source: "source/Dockerfile,source/docker-compose.yml,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
 
@@ -112,14 +112,39 @@ jobs:
             echo "Waiting for services..."
             sleep 45
             
-            # Simple health check
+            # Detailed health check
             echo "=== Health Check ==="
             docker-compose ps
             
-            if curl -f http://localhost:80/api/v1/health; then
-              echo "✅ Deploy successful! API is running on port 3006"
+            # Check if containers are running
+            if ! docker-compose ps | grep -q "Up"; then
+              echo "❌ Containers not running, checking logs..."
+              docker-compose logs --tail=50
+              exit 1
+            fi
+            
+            # Check nginx is listening on port 80
+            if ! netstat -tlnp | grep :80; then
+              echo "❌ Port 80 not listening, checking nginx logs..."
+              docker-compose logs nginx --tail=30
+              exit 1
+            fi
+            
+            # Test backend directly on port 3006
+            echo "Testing backend directly on port 3006..."
+            if curl -f http://localhost:3006/api/v1/health; then
+              echo "✅ Backend is working on port 3006"
             else
-              echo "❌ Deploy failed, checking logs..."
-              docker-compose logs --tail=30
+              echo "❌ Backend failed on port 3006, checking backend logs..."
+              docker-compose logs backend --tail=30
+            fi
+            
+            # Test through nginx on port 80
+            echo "Testing through nginx on port 80..."
+            if curl -f http://localhost:80/api/v1/health; then
+              echo "✅ Deploy successful! API is accessible through nginx"
+            else
+              echo "❌ Nginx proxy failed, checking all logs..."
+              docker-compose logs --tail=50
               exit 1
             fi
