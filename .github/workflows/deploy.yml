@@ -134,19 +134,78 @@ jobs:
             echo "POSTGRES_USER=${{ secrets.DB_USER }}" >> .env
             echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             
-            # Update nginx configuration with actual port
+            # Update nginx configurations with actual port
             sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx.conf
+            sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx-initial.conf
             
-            # Deploy with Docker Compose
+            # Stop any existing nginx service that might conflict
+            systemctl stop nginx || true
+            systemctl disable nginx || true
+            
+            # Kill any process using port 80 (except our container)
+            lsof -ti:80 | grep -v docker | xargs kill -9 || true
+            
+            # Use initial nginx config for SSL generation
+            cp nginx-initial.conf nginx.conf
+            
+            # Deploy with Docker Compose (initial setup)
             docker-compose down || true
             docker-compose up -d --build
+            
+            # Wait for nginx to be ready
+            echo "Waiting for nginx to be ready..."
+            sleep 10
+            
+            # Generate SSL certificate
+            echo "Generating SSL certificate..."
+            if docker-compose run --rm certbot; then
+              echo "SSL certificate generated successfully"
+              
+              # Restore full nginx config with SSL
+              cp nginx.conf.bak nginx.conf || git checkout nginx.conf
+              sed -i "s/PORT_PLACEHOLDER/${{ needs.port-check.outputs.APP_PORT }}/g" nginx.conf
+              
+              # Reload nginx to use SSL certificate
+              docker-compose exec nginx nginx -s reload
+              
+              # Setup SSL renewal cron job
+              echo "Setting up SSL renewal cron job..."
+              chmod +x ssl-renewal.sh
+              (crontab -l 2>/dev/null; echo "0 2 * * * /var/www/metalgest/ssl-renewal.sh >> /var/log/ssl-renewal.log 2>&1") | crontab -
+            else
+              echo "SSL certificate generation failed, continuing with HTTP only"
+            fi
             # Health check
-            sleep 20
+            sleep 15
             docker ps
-            # Check if nginx is running (port 80)
-            if ! curl -f http://localhost:80/api/v1/health; then
-              echo "Health check failed, checking container logs..."
+            
+            # Check if nginx is running (HTTP - should redirect to HTTPS)
+            echo "Testing HTTP to HTTPS redirect..."
+            if ! curl -I -s http://localhost:80/api/v1/health | grep -q "301\|302"; then
+              echo "HTTP to HTTPS redirect test failed, checking container logs..."
               docker logs metalgest_backend_1 --tail 50
+              docker logs metalgest_nginx_1 --tail 50
+            fi
+            
+            # Check HTTPS API health check
+            echo "Testing HTTPS API health check..."
+            if ! curl -f -k https://localhost:443/api/v1/health; then
+              echo "HTTPS API health check failed, checking container logs..."
+              docker logs metalgest_backend_1 --tail 50
+              docker logs metalgest_nginx_1 --tail 50
+              # Try HTTP fallback for debugging
+              echo "Trying HTTP fallback..."
+              curl -f http://localhost:80/api/v1/health || echo "HTTP also failed"
+              exit 1
+            fi
+            
+            # Check domain resolution with HTTPS
+            echo "Testing HTTPS domain access..."
+            if ! curl -f -k -H "Host: www.metalgest.com.br" https://localhost:443/api/v1/health; then
+              echo "HTTPS domain access failed, checking nginx config..."
+              docker exec metalgest_nginx_1 nginx -t
               docker logs metalgest_nginx_1 --tail 50
               exit 1
             fi
+            
+            echo "Deploy successful! API is running on port ${{ needs.port-check.outputs.APP_PORT }} with SSL enabled"
