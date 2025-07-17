@@ -132,16 +132,24 @@ jobs:
             echo "Waiting for database to be ready..."
             sleep 20
             
+            # Check backend logs for debugging
+            echo "=== Backend Container Logs ==="
+            docker-compose logs backend --tail=20
+            
             # Wait for backend to be ready
             echo "Waiting for backend to be ready..."
             for i in {1..30}; do
               if docker-compose exec -T backend node -e "console.log('Backend is ready')" 2>/dev/null; then
-                echo "✅ Backend is ready after ${i} attempts"
+                echo "✅ Backend container is responsive after ${i} attempts"
                 break
               fi
               echo "Backend not ready, attempt ${i}/30..."
               sleep 5
             done
+            
+            # Try to connect to backend port directly
+            echo "Testing backend port 3006 directly..."
+            docker-compose exec -T backend netstat -tlnp | grep 3006 || echo "Port 3006 not listening in backend container"
             
             # Check container status
             echo "=== Container Status ==="
@@ -159,8 +167,13 @@ jobs:
             if curl -f http://localhost:3006/api/v1/health; then
               echo "✅ Backend is working on port 3006"
             else
-              echo "❌ Backend failed on port 3006, checking backend logs..."
-              docker-compose logs backend --tail=30
+              echo "❌ Backend failed on port 3006, checking all logs..."
+              echo "=== Backend Logs ==="
+              docker-compose logs backend --tail=50
+              echo "=== Environment Variables ==="
+              docker-compose exec -T backend printenv | grep -E "(PORT|NODE_ENV|DATABASE_URL)" || echo "No env vars found"
+              echo "=== Network Info ==="
+              docker-compose exec -T backend netstat -tlnp || echo "netstat not available"
             fi
             
             # Test through nginx on port 80
