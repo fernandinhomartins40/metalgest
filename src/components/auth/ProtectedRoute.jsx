@@ -16,6 +16,17 @@ function ProtectedRoute({ children, requiredModule }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // First check if user is already stored locally
+        const storedUser = storage.get("user")
+        const isAuthenticated = auth.isAuthenticated()
+        
+        if (storedUser && isAuthenticated) {
+          setUser(storedUser)
+          setLoading(false)
+          return
+        }
+        
+        // If not authenticated locally, check with server
         const currentUser = await auth.getCurrentUser()
         
         if (currentUser) {
@@ -23,7 +34,6 @@ function ProtectedRoute({ children, requiredModule }) {
           setUser(currentUser)
           
           // Update stored user if needed
-          const storedUser = storage.get("user")
           if (!storedUser || storedUser.id !== currentUser.id) {
             storage.set("user", currentUser)
           }
@@ -42,7 +52,7 @@ function ProtectedRoute({ children, requiredModule }) {
     }
 
     checkAuth()
-  }, [])
+  }, [location.pathname])
 
   if (loading) {
     return <Loading fullScreen />

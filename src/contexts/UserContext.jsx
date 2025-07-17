@@ -45,24 +45,14 @@ export function UserProvider({ children }) {
       
       setUser(result.user)
       
-      toast({
-        title: "Login realizado",
-        description: "Bem-vindo de volta!",
-      })
-      
       return result
     } catch (error) {
       console.error('Login failed:', error)
-      toast({
-        variant: "destructive",
-        title: "Erro no login",
-        description: error.message,
-      })
       throw error
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [])
 
   const logout = useCallback(async () => {
     try {

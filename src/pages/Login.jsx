@@ -13,6 +13,7 @@ function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [isResetting, setIsResetting] = useState(false)
+  const [loginSuccess, setLoginSuccess] = useState(false)
   const { register, handleSubmit, formState: { errors, isSubmitting }, getValues, setValue } = useForm()
 
   // Load saved credentials on mount
@@ -27,17 +28,35 @@ function Login() {
 
   const onSubmit = async (data) => {
     try {
-      await auth.login(data.email, data.password, data.rememberMe, data.keepConnected)
+      const result = await auth.login(data.email, data.password, data.rememberMe, data.keepConnected)
+      
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      
+      // Show success state
+      setLoginSuccess(true)
+      
+      // Show success toast with user name if available
+      const userName = result.user?.name || "Usuário"
       toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo de volta!"
+        title: "✅ Login realizado com sucesso!",
+        description: `Bem-vindo de volta, ${userName}!`,
+        duration: 3000
       })
-      navigate("/app")
+      
+      // Delay to show success state and toast before navigation
+      setTimeout(() => {
+        navigate("/app", { replace: true })
+      }, 1500)
+      
     } catch (error) {
+      console.error("Login error:", error)
       toast({
         variant: "destructive",
-        title: "Erro no login",
-        description: error.message
+        title: "❌ Erro no login",
+        description: error.message || "Credenciais inválidas. Verifique seus dados e tente novamente.",
+        duration: 5000
       })
     }
   }
@@ -174,11 +193,23 @@ function Login() {
                   >
                     <Button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-2 px-4 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all duration-200"
+                      disabled={isSubmitting || loginSuccess}
+                      className={`w-full py-2 px-4 flex items-center justify-center gap-2 transition-all duration-200 text-white rounded-lg ${
+                        loginSuccess 
+                          ? 'bg-green-500 hover:bg-green-500' 
+                          : 'bg-primary hover:bg-primary/90'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      {isSubmitting ? (
-                        "Entrando..."
+                      {loginSuccess ? (
+                        <>
+                          <div className="w-4 h-4 rounded-full bg-white text-green-500 flex items-center justify-center text-xs">✓</div>
+                          Sucesso! Redirecionando...
+                        </>
+                      ) : isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Entrando...
+                        </>
                       ) : (
                         <>
                           Entrar
