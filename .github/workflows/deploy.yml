@@ -82,149 +82,44 @@ jobs:
           script: |
             cd /var/www/metalgest
             
-            # Create environment file with fixed port 3006
-            echo "# Backend Environment Variables" > .env
-            echo "NODE_ENV=production" >> .env
-            echo "PORT=3006" >> .env
-            echo "API_VERSION=v1" >> .env
-            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-            echo "JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}" >> .env
-            echo "DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}" >> .env
-            echo "" >> .env
-            echo "# Database Environment Variables" >> .env
-            echo "POSTGRES_DB=${{ secrets.DB_NAME }}" >> .env
-            echo "POSTGRES_USER=${{ secrets.DB_USER }}" >> .env
-            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            # Create environment file
+            cat > .env << EOF
+            NODE_ENV=production
+            PORT=3006
+            API_VERSION=v1
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            DATABASE_URL=postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}
+            POSTGRES_DB=${{ secrets.DB_NAME }}
+            POSTGRES_USER=${{ secrets.DB_USER }}
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+            EOF
             
-            # Update nginx configurations with port 3006
-            sed -i "s/PORT_PLACEHOLDER/3006/g" nginx.conf
+            # Update nginx config
             sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
-            
-            # Stop any existing services that might conflict
-            systemctl stop nginx || true
-            systemctl disable nginx || true
-            
-            # Kill any process using ports 80 and 443
-            lsof -ti:80 | xargs kill -9 || true
-            lsof -ti:443 | xargs kill -9 || true
-            
-            # Stop any existing containers and clean up
-            docker-compose down -v || true
-            docker system prune -f || true
-            docker volume prune -f || true
-            
-            # Ensure directories exist and check contents
-            mkdir -p frontend/dist backend/dist certbot_certs certbot_www
-            
-            echo "=== Directory Contents Check ==="
-            ls -la
-            ls -la frontend/ || echo "Frontend directory not found"
-            ls -la backend/ || echo "Backend directory not found"
-            
-            # First, deploy with HTTP-only configuration
-            echo "=== Phase 1: Deploy with HTTP-only configuration ==="
             cp nginx-initial.conf nginx.conf
             
-            # Build and deploy with Docker Compose
-            echo "Building and starting containers..."
-            if ! docker-compose build --no-cache; then
-              echo "ERROR: Docker build failed"
-              exit 1
-            fi
+            # Clean up
+            systemctl stop nginx || true
+            docker-compose down -v || true
+            docker system prune -f || true
             
-            if ! docker-compose up -d; then
-              echo "ERROR: Docker compose up failed"
-              docker-compose logs
-              exit 1
-            fi
+            # Deploy
+            echo "=== Deploying application ==="
+            docker-compose up -d --build
             
-            # Wait for services to be ready with better monitoring
-            echo "Waiting for services to be ready..."
-            for i in {1..60}; do
-              if docker-compose ps | grep -q "Up"; then
-                echo "At least one service is up after ${i} seconds"
-                break
-              fi
-              echo "Waiting... ${i}/60"
-              sleep 1
-            done
+            # Wait and test
+            echo "Waiting for services..."
+            sleep 45
             
-            # Check if containers are running with detailed info
-            echo "=== Container Status ==="
-            docker-compose ps
-            docker ps -a
-            
-            # Check logs if containers failed to start
-            if ! docker-compose ps | grep -q "Up"; then
-              echo "=== Container Logs ==="
-              docker-compose logs --tail=50
-              exit 1
-            fi
-            
-            # Test HTTP connectivity first
-            echo "=== Testing HTTP connectivity ==="
-            for i in {1..10}; do
-              if curl -f http://localhost:80/api/v1/health; then
-                echo "HTTP API is working!"
-                break
-              fi
-              echo "Attempt $i failed, retrying in 10s..."
-              sleep 10
-            done
-            
-            # Skip SSL for now - focus on getting HTTP working first
-            echo "=== Phase 2: SSL configuration skipped for initial deployment ==="
-            echo "SSL will be configured in a future deployment once HTTP is stable"
-            # Final health check
-            echo "=== Final Health Check ==="
-            sleep 10
+            # Simple health check
+            echo "=== Health Check ==="
             docker-compose ps
             
-            # Get container names dynamically
-            BACKEND_CONTAINER=$(docker-compose ps -q backend 2>/dev/null)
-            NGINX_CONTAINER=$(docker-compose ps -q nginx 2>/dev/null)
-            
-            # Alternative method to get container names
-            if [ -z "$BACKEND_CONTAINER" ]; then
-              BACKEND_CONTAINER=$(docker ps --format "table {{.Names}}" | grep backend | head -1)
-            fi
-            
-            if [ -z "$NGINX_CONTAINER" ]; then
-              NGINX_CONTAINER=$(docker ps --format "table {{.Names}}" | grep nginx | head -1)
-            fi
-            
-            echo "Backend container: $BACKEND_CONTAINER"
-            echo "Nginx container: $NGINX_CONTAINER"
-            
-            if [ -z "$BACKEND_CONTAINER" ] || [ -z "$NGINX_CONTAINER" ]; then
-              echo "ERROR: Containers not found!"
-              echo "=== All running containers ==="
-              docker ps
-              echo "=== Docker compose status ==="
-              docker-compose ps
-              echo "=== Container logs ==="
+            if curl -f http://localhost:80/api/v1/health; then
+              echo "✅ Deploy successful! API is running on port 3006"
+            else
+              echo "❌ Deploy failed, checking logs..."
               docker-compose logs --tail=30
               exit 1
-            fi
-            
-            # Test HTTP API health check
-            echo "=== Testing HTTP API health check ==="
-            if curl -f http://localhost:80/api/v1/health; then
-              echo "HTTP API health check passed!"
-            else
-              echo "HTTP API health check failed, checking container logs..."
-              docker logs $BACKEND_CONTAINER --tail 30
-              docker logs $NGINX_CONTAINER --tail 30
-              exit 1
-            fi
-            
-            # Skip HTTPS test for now
-            echo "Deploy successful! API is running on port 3006 (HTTP only)"
-            
-            # Test domain resolution
-            echo "=== Testing domain access ==="
-            if curl -f -H "Host: www.metalgest.com.br" http://localhost:80/api/v1/health; then
-              echo "Domain access test passed!"
-            else
-              echo "Domain access test failed, but localhost works"
             fi

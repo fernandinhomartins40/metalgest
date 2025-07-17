@@ -1,35 +1,33 @@
-# Estágio 1: Builder - Compila o TypeScript para JavaScript
+# Multi-stage build para otimização
 FROM node:18-alpine AS builder
 
-# Define o diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de dependências e instala
+# Copia arquivos de dependências do backend
 COPY backend/package*.json ./
 RUN npm install
 
-# Copia o resto do código do backend
+# Copia código do backend
 COPY backend/ ./
 
 # Compila o projeto
-RUN npm run build # Garanta que você tem um script "build" em backend/package.json que compila TS para JS (ex: tsc)
+RUN npm run build
 
-# ---
-
-# Estágio 2: Production - Cria a imagem final e otimizada
+# Estágio de produção
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copia as dependências de produção do estágio de build
+# Copia package.json e arquivos compilados do builder
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
-# Copia o código compilado do estágio de build
 COPY --from=builder /app/dist ./dist
-# Copia o package.json para que o entrypoint funcione
-COPY backend/package.json ./
 
-# Expõe a porta que a aplicação vai usar (será definida no docker-compose)
-# EXPOSE 3001 (Opcional, a porta real será mapeada no docker-compose)
+# Instala apenas dependências de produção
+RUN npm ci --only=production && npm cache clean --force
+
+# Expõe a porta 3006
+EXPOSE 3006
 
 # Comando para iniciar a aplicação
-CMD [ "node", "dist/index.js" ]
+CMD ["node", "dist/index.js"]
