@@ -14,8 +14,8 @@ RUN npm install --only=production && npm cache clean --force
 # Gera o Prisma client
 RUN npx prisma generate
 
-# Expõe a porta 3006
-EXPOSE 3006
+# Expõe a porta 8080
+EXPOSE 8080
 
 # Comando para iniciar a aplicação
 CMD ["node", "dist/index.js"]
