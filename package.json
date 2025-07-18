@@ -10,7 +10,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "build:web": "turbo run build --filter=web",
-    "build:server": "turbo run build --filter=server",
+    "build:server": "turbo run build:server --filter=server",
     "start:web": "turbo run start --filter=web",
     "start:server": "turbo run start --filter=server",
     "type-check": "turbo run type-check",
