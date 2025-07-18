@@ -66,13 +66,24 @@ jobs:
         with:
           path: source
           
+      - name: Create VPS directories
+        uses: appleboy/ssh-action@master
+        with:
+          host: 31.97.85.98
+          username: root
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            mkdir -p /var/www/metalgest
+            mkdir -p /var/www/metalgest/backend
+            mkdir -p /var/www/metalgest/nginx
+            
       - name: Transfer files to VPS
         uses: appleboy/scp-action@master
         with:
           host: 31.97.85.98
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile,source/docker-compose.yml,source/entrypoint.sh,source/nginx.conf,source/nginx-initial.conf,source/ssl-renewal.sh,source/backend/package.json,source/backend/prisma,frontend/dist,backend/dist"
+          source: "source/Dockerfile,source/docker-compose.yml,source/entrypoint.sh,source/rollback.sh,source/backend/package.json,source/backend/prisma,source/nginx,frontend/dist,backend/dist"
           target: "/var/www/metalgest"
           strip_components: 1
           debug: true
@@ -211,7 +222,7 @@ jobs:
             echo "Creating .env file..."
             cat > .env << EOF
             NODE_ENV=production
-            PORT=3006
+            PORT=3001
             API_VERSION=v1
             JWT_SECRET=${JWT_SECRET}
             JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
@@ -235,13 +246,7 @@ jobs:
             
             # === Setup Nginx Configuration ===
             echo "=== Setting up Nginx ==="
-            if [ -f nginx-initial.conf ]; then
-              sed -i "s/PORT_PLACEHOLDER/3006/g" nginx-initial.conf
-              cp nginx-initial.conf nginx.conf
-              echo "✅ Nginx configuration updated"
-            else
-              echo "⚠️ nginx-initial.conf not found, using default nginx.conf"
-            fi
+            echo "✅ Using nginx/default.conf configuration"
             
             # === Clean Up Previous Deployment ===
             echo "=== Cleaning up previous deployment ==="
@@ -256,6 +261,18 @@ jobs:
             systemctl stop nginx 2>/dev/null || echo "System nginx not running"
             
             # === Deploy Application ===
+            # === Create backup before deploy ===
+            echo "=== Creating backup before deploy ==="
+            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+            mkdir -p /var/www/metalgest-backup
+            if [ -d "/var/www/metalgest" ]; then
+              cp -r /var/www/metalgest /var/www/metalgest-backup/deploy-$TIMESTAMP
+              echo "✅ Backup created: /var/www/metalgest-backup/deploy-$TIMESTAMP"
+            fi
+            
+            # Make rollback script executable
+            chmod +x /var/www/metalgest/rollback.sh
+            
             echo "=== Deploying application ==="
             
             # Build and start containers (database first)
@@ -303,7 +320,7 @@ jobs:
                 fi
                 
                 # Try direct API call as backup health check
-                if curl -s -f http://localhost:3006/api/v1/health >/dev/null 2>&1; then
+                if curl -s -f http://localhost:3001/api/v1/health >/dev/null 2>&1; then
                   echo "✅ Backend responds to health check (direct) after ${i} attempts"
                   BACKEND_HEALTHY=true
                   break
@@ -346,7 +363,7 @@ jobs:
             echo "Testing application endpoints..."
             
             # Test direct backend health
-            if curl -s -f http://localhost:3006/api/v1/health 2>/dev/null; then
+            if curl -s -f http://localhost:3001/api/v1/health 2>/dev/null; then
               echo "✅ Direct Backend Health Check - OK"
             else
               echo "⚠️ Direct Backend Health Check - FAILED"
@@ -371,8 +388,10 @@ jobs:
               docker-compose exec nginx nginx -t 2>/dev/null || echo "Nginx config test failed"
               
               # Only exit if both backend and nginx are failing
-              if ! curl -s -f http://localhost:3006/api/v1/health 2>/dev/null; then
+              if ! curl -s -f http://localhost:3001/api/v1/health 2>/dev/null; then
                 echo "❌ Critical: Both backend and nginx proxy are failing"
+                echo "🔄 Executing rollback..."
+                bash /var/www/metalgest/rollback.sh
                 exit 1
               else
                 echo "⚠️ Backend works directly but nginx proxy fails - continuing deployment"
