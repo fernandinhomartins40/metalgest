@@ -32,22 +32,46 @@ jobs:
 
       - name: Create .env file for Backend
         run: |
-          echo "DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\"" > apps/server/.env
-          echo "NEXTAUTH_SECRET=\"dummy-secret\"" >> apps/server/.env
-          echo "NEXTAUTH_URL=\"http://localhost:3000\"" >> apps/server/.env
-          echo "JWT_SECRET=\"dummy-jwt-secret\"" >> apps/server/.env
+          echo "NODE_ENV=production" > apps/server/.env
+          echo "DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\"" >> apps/server/.env
+          echo "NEXTAUTH_SECRET=\"dummy-secret-for-build\"" >> apps/server/.env
+          echo "NEXTAUTH_URL=\"https://metalgest.com.br\"" >> apps/server/.env
+          echo "JWT_SECRET=\"dummy-jwt-secret-for-build\"" >> apps/server/.env
+          echo "NEXT_PUBLIC_API_URL=\"https://metalgest.com.br\"" >> apps/server/.env
 
       - name: Build Backend (Turbo)
         run: |
+          # Limpar cache do turbo para evitar problemas
+          rm -rf apps/server/.turbo
+          rm -rf apps/server/.next
+          
+          # Executar build do backend
           npm run build:server || (echo "❌ Falha no build do backend" && exit 1)
 
           echo "✅ Verificando se apps/server/.next foi gerado..."
           if [ ! -d "apps/server/.next" ]; then
             echo "❌ ERRO: Diretório apps/server/.next não foi criado!"
+            echo "Listando conteúdo do diretório apps/server:"
+            ls -la apps/server/
+            echo "Verificando estrutura do projeto:"
+            find apps/server -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | head -20
             exit 1
           fi
 
+          echo "✅ Diretório .next criado com sucesso!"
+          echo "Conteúdo do diretório .next:"
           ls -la apps/server/.next
+          
+          # Verificar se arquivos essenciais estão presentes
+          if [ ! -f "apps/server/.next/BUILD_ID" ]; then
+            echo "❌ ERRO: BUILD_ID não encontrado!"
+            echo "Conteúdo completo do diretório .next:"
+            find apps/server/.next -type f | head -20
+            exit 1
+          fi
+          
+          echo "✅ Build do backend concluído com sucesso!"
+          echo "BUILD_ID: $(cat apps/server/.next/BUILD_ID)"
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
