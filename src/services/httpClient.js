@@ -2,17 +2,8 @@
 
 // Base configuration
 const API_BASE_URL = (() => {
-  // Debug environment variables
-  console.log('🔍 API URL Debug:', {
-    VITE_API_URL: import.meta.env.VITE_API_URL,
-    NODE_ENV: import.meta.env.NODE_ENV,
-    MODE: import.meta.env.MODE,
-    all_env: import.meta.env
-  });
-  
   // Priority 1: Use environment variable if defined
   if (import.meta.env.VITE_API_URL) {
-    console.log('✅ Using VITE_API_URL:', import.meta.env.VITE_API_URL);
     return import.meta.env.VITE_API_URL;
   }
   
@@ -21,29 +12,20 @@ const API_BASE_URL = (() => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    console.log('🌐 Auto-detecting environment:', { hostname, protocol });
-    
     // If running on metalgest.com.br or www.metalgest.com.br
     if (hostname.includes('metalgest.com.br')) {
-      const apiUrl = `https://metalgest.com.br/api/v1`;
-      console.log('✅ Using metalgest.com.br API:', apiUrl);
-      return apiUrl;
+      return `https://metalgest.com.br/api/v1`;
     }
     
     // If running on any other domain (not localhost)
     if (!hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
-      const apiUrl = `${protocol}//${hostname}/api/v1`;
-      console.log('✅ Using domain API:', apiUrl);
-      return apiUrl;
+      return `${protocol}//${hostname}/api/v1`;
     }
   }
   
   // Priority 3: Development fallback
-  console.log('⚠️ Using development fallback: http://localhost:3001/api/v1');
   return 'http://localhost:3001/api/v1';
 })();
-
-console.log('🚀 Final API_BASE_URL:', API_BASE_URL);
 
 // Token management
 const TokenManager = {
