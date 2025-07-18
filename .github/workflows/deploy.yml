@@ -39,10 +39,11 @@ jobs:
 
       - name: Build Backend
         run: |
-          cd apps/server && npm run build
-          # Verificar se o build foi criado
-          echo "Verificando apps/server/.next:"
-          ls -la apps/server/.next/ || echo "ERRO: Backend .next não foi criado!"
+          npm run build:server || (echo "❌ ERRO: Falha ao buildar o backend" && exit 1)
+          if [ ! -d "apps/server/.next" ]; then
+            echo "❌ ERRO: Backend não gerou a pasta .next corretamente!"
+            exit 1
+          fi
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
