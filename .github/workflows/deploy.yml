@@ -227,7 +227,7 @@ jobs:
             JWT_SECRET=${JWT_SECRET}
             JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
             DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-            CORS_ORIGIN=*
+            CORS_ORIGIN=https://metalgest.com.br,https://www.metalgest.com.br,http://metalgest.com.br,http://www.metalgest.com.br
             POSTGRES_DB=${DB_NAME}
             POSTGRES_USER=${DB_USER}
             POSTGRES_PASSWORD=${DB_PASSWORD}

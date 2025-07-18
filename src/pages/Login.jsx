@@ -52,10 +52,28 @@ function Login() {
       
     } catch (error) {
       console.error("Login error:", error)
+      
+      let errorMessage = "Credenciais inválidas. Verifique seus dados e tente novamente."
+      let errorTitle = "❌ Erro no login"
+      
+      // Handle specific error types
+      if (error.isNetworkError) {
+        errorTitle = "🌐 Erro de Conexão"
+        errorMessage = error.message
+      } else if (error.isCorsError) {
+        errorTitle = "⚠️ Erro de Configuração"
+        errorMessage = error.message
+      } else if (error.status === 0) {
+        errorTitle = "🔗 Servidor Indisponível"
+        errorMessage = "Não foi possível conectar ao servidor. Verifique se o sistema está online."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
       toast({
         variant: "destructive",
-        title: "❌ Erro no login",
-        description: error.message || "Credenciais inválidas. Verifique seus dados e tente novamente.",
+        title: errorTitle,
+        description: errorMessage,
         duration: 5000
       })
     }

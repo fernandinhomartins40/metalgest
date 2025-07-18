@@ -125,40 +125,61 @@ class HttpClient {
   async request(endpoint, options = {}) {
     let { url, options: requestOptions } = this.createRequest(endpoint, options);
 
-    // First attempt
-    let response = await fetch(url, requestOptions);
-    
-    // If token expired, try to refresh
-    if (response.status === 401 && !endpoint.includes('/auth/')) {
-      const token = TokenManager.getAccessToken();
+    try {
+      // First attempt
+      let response = await fetch(url, requestOptions);
       
-      if (token && TokenManager.isTokenExpired(token)) {
-        try {
-          await this.refreshToken();
-          
-          // Retry with new token
-          const retryRequest = this.createRequest(endpoint, options);
-          response = await fetch(retryRequest.url, retryRequest.options);
-        } catch (refreshError) {
-          // Refresh failed, redirect to login
-          console.error('Token refresh failed:', refreshError);
-          return response;
+      // If token expired, try to refresh
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        const token = TokenManager.getAccessToken();
+        
+        if (token && TokenManager.isTokenExpired(token)) {
+          try {
+            await this.refreshToken();
+            
+            // Retry with new token
+            const retryRequest = this.createRequest(endpoint, options);
+            response = await fetch(retryRequest.url, retryRequest.options);
+          } catch (refreshError) {
+            // Refresh failed, redirect to login
+            console.error('Token refresh failed:', refreshError);
+            return response;
+          }
         }
       }
+
+      // Parse response
+      const result = await response.json();
+
+      // Handle errors
+      if (!response.ok) {
+        const error = new Error(result.error?.message || 'Request failed');
+        error.status = response.status;
+        error.data = result;
+        throw error;
+      }
+
+      return result;
+    } catch (fetchError) {
+      // Handle network errors
+      if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+        const networkError = new Error('Erro de conexão: Não foi possível conectar ao servidor. Verifique sua conexão de internet.');
+        networkError.status = 0;
+        networkError.isNetworkError = true;
+        throw networkError;
+      }
+      
+      // Handle CORS errors
+      if (fetchError.message.includes('CORS')) {
+        const corsError = new Error('Erro CORS: Problema de configuração do servidor. Tente novamente ou contate o suporte.');
+        corsError.status = 0;
+        corsError.isCorsError = true;
+        throw corsError;
+      }
+      
+      // Re-throw other errors
+      throw fetchError;
     }
-
-    // Parse response
-    const result = await response.json();
-
-    // Handle errors
-    if (!response.ok) {
-      const error = new Error(result.error?.message || 'Request failed');
-      error.status = response.status;
-      error.data = result;
-      throw error;
-    }
-
-    return result;
   }
 
   // HTTP Methods
