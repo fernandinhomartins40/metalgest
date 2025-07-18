@@ -21,6 +21,8 @@ jobs:
       - name: Build Frontend
         run: |
           npm install
+          # Set production API URL for build
+          echo "VITE_API_URL=https://metalgest.com.br/api/v1" > .env.production
           npm run build
 
       - name: Build Backend
