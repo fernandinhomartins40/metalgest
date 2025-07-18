@@ -39,7 +39,7 @@ jobs:
 
       - name: Build Backend
         run: |
-          npm run build:server
+          cd apps/server && npm run build
           # Verificar se o build foi criado
           echo "Verificando apps/server/.next:"
           ls -la apps/server/.next/ || echo "ERRO: Backend .next não foi criado!"
