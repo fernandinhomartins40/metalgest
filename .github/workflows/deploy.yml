@@ -37,13 +37,17 @@ jobs:
           echo "NEXTAUTH_URL=\"http://localhost:3000\"" >> apps/server/.env
           echo "JWT_SECRET=\"dummy-jwt-secret\"" >> apps/server/.env
 
-      - name: Build Backend
+      - name: Build Backend (Turbo)
         run: |
-          npm run build:server || (echo "❌ ERRO: Falha ao buildar o backend" && exit 1)
+          npm run build:server || (echo "❌ Falha no build do backend" && exit 1)
+
+          echo "✅ Verificando se apps/server/.next foi gerado..."
           if [ ! -d "apps/server/.next" ]; then
-            echo "❌ ERRO: Backend não gerou a pasta .next corretamente!"
+            echo "❌ ERRO: Diretório apps/server/.next não foi criado!"
             exit 1
           fi
+
+          ls -la apps/server/.next
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
