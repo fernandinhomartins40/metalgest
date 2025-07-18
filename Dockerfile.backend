@@ -1,0 +1,63 @@
+# Backend Dockerfile for T3 Stack
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install turbo globally
+RUN npm install -g turbo
+
+# Copy package.json files
+COPY package*.json ./
+COPY turbo.json ./
+COPY apps/server/package*.json ./apps/server/
+COPY packages/*/package*.json ./packages/*/
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client
+RUN npm run db:generate
+
+# Build the application
+RUN npm run build:server
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+# Don't run production as root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder --chown=nextjs:nodejs /app/apps/server/.next ./apps/server/.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/server/public ./apps/server/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/server/package*.json ./apps/server/
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
+
+# Copy Prisma files
+COPY --from=builder --chown=nextjs:nodejs /app/packages/database/prisma ./packages/database/prisma
+
+# Create uploads directory
+RUN mkdir -p ./apps/server/uploads
+RUN chown nextjs:nodejs ./apps/server/uploads
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV NODE_ENV production
+
+# Run database migrations and start the server
+CMD ["sh", "-c", "npm run db:push && npm run start:server"]

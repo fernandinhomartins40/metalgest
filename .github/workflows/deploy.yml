@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Application
+    name: Build T3 Stack Application
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,34 +17,43 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run db:generate
 
       - name: Build Frontend
         run: |
-          npm install
           # Set production API URL for build
-          echo "VITE_API_URL=https://metalgest.com.br/api/v1" > .env.production
-          npm run build
+          echo "NEXT_PUBLIC_API_URL=https://metalgest.com.br" > apps/web/.env.production
+          npm run build:web
 
       - name: Build Backend
         run: |
-          cd backend
-          npm install
-          npm run build
+          npm run build:server
           # Verificar se o build foi criado
-          echo "Verificando backend/dist:"
-          ls -la dist/ || echo "ERRO: Backend dist não foi criado!"
+          echo "Verificando apps/server/.next:"
+          ls -la apps/server/.next/ || echo "ERRO: Backend .next não foi criado!"
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: dist
+          path: apps/web/dist
 
       - name: Upload Backend Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-dist
-          path: backend/dist
+          name: backend-build
+          path: apps/server/.next
+
+      - name: Upload Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: packages
 
   deploy:
     name: Deploy to VPS
@@ -55,13 +64,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist
+          path: apps/web/dist
 
       - name: Download Backend Artifact
         uses: actions/download-artifact@v4
         with:
-          name: backend-dist
-          path: backend/dist
+          name: backend-build
+          path: apps/server/.next
+
+      - name: Download Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: packages
 
       - name: Checkout code for deploy files
         uses: actions/checkout@v4
@@ -85,12 +100,12 @@ jobs:
           host: 31.97.85.98
           username: root
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile,source/docker-compose.yml,source/entrypoint.sh,source/rollback.sh,source/backend/package.json,source/backend/prisma,source/nginx,frontend/dist,backend/dist"
+          source: "source/Dockerfile.backend,source/Dockerfile.frontend,source/docker-compose.yml,source/entrypoint.sh,source/rollback.sh,source/package.json,source/turbo.json,source/apps,source/packages,source/nginx,apps/web/dist,apps/server/.next,packages"
           target: "/var/www/metalgest"
           strip_components: 1
           debug: true
           
-      - name: Ensure backend structure
+      - name: Ensure T3 Stack structure
         uses: appleboy/ssh-action@master
         with:
           host: 31.97.85.98
@@ -99,68 +114,55 @@ jobs:
           script: |
             cd /var/www/metalgest
             
-            # Verifica e cria estrutura do backend se necessário
-            echo "=== Verificando estrutura inicial ==="
+            # Verifica e cria estrutura do T3 Stack se necessário
+            echo "=== Verificando estrutura T3 Stack ==="
             echo "Conteúdo da pasta atual:"
             ls -la
             echo ""
             echo "Estrutura de diretórios:"
-            find . -type d -name "*dist*" -o -name "backend" -o -name "frontend" 2>/dev/null || echo "Nenhum diretório dist/backend/frontend encontrado"
+            find . -type d -name "apps" -o -name "packages" -o -name ".next" 2>/dev/null || echo "Nenhum diretório T3 Stack encontrado"
             echo ""
             
-            # Criar estrutura backend se não existir
-            mkdir -p backend
-            
-            # Verifica se backend/dist existe
-            if [ ! -d "backend/dist" ]; then
-              echo "⚠️ backend/dist não encontrado, verificando alternativas..."
-              
-              # Procurar por arquivos dist em qualquer lugar
-              if [ -d "dist" ]; then
-                echo "✓ Encontrado dist na raiz, movendo para backend/"
-                mv dist backend/
-              elif find . -name "*.js" -path "*/dist/*" | head -1 | grep -q .; then
-                echo "✓ Encontrados arquivos JS compilados, organizando estrutura..."
-                # Mover todos os arquivos dist encontrados para backend/dist
-                find . -name "dist" -type d | while read distdir; do
-                  if [ "$distdir" != "./backend/dist" ]; then
-                    echo "Movendo $distdir para backend/"
-                    mkdir -p backend/dist
-                    cp -r "$distdir"/* backend/dist/ 2>/dev/null || true
-                  fi
-                done
-              else
-                echo "❌ ERRO: Nenhum arquivo compilado encontrado!"
-                echo "Listando todos os arquivos JavaScript encontrados:"
-                find . -name "*.js" | head -10
-                exit 1
-              fi
-            fi
-            
-            # Verifica se frontend/dist existe e move para raiz
-            if [ ! -d "dist" ] && [ -d "frontend/dist" ]; then
-              echo "✓ Movendo frontend/dist para raiz"
-              mv frontend/dist .
-            fi
-            
-            echo ""
-            echo "=== Estrutura final verificada ==="
-            echo "Backend structure:"
-            ls -la backend/ 2>/dev/null || echo "❌ Backend folder not found"
-            echo "Backend dist contents:"
-            ls -la backend/dist/ 2>/dev/null || echo "❌ Backend dist not found"
-            echo "Frontend dist (root):"
-            ls -la dist/ 2>/dev/null || echo "❌ Frontend dist not found"
-            echo ""
-            
-            # Verificação final obrigatória
-            if [ ! -f "backend/dist/index.js" ]; then
-              echo "❌ ERRO CRÍTICO: backend/dist/index.js não encontrado!"
-              echo "O deploy não pode continuar sem o backend compilado."
+            # Verificar se a estrutura do T3 Stack está correta
+            if [ ! -d "apps" ]; then
+              echo "❌ ERRO: Diretório apps não encontrado!"
+              echo "Estrutura T3 Stack não está correta."
               exit 1
-            else
-              echo "✅ backend/dist/index.js encontrado - estrutura OK"
             fi
+            
+            if [ ! -d "packages" ]; then
+              echo "❌ ERRO: Diretório packages não encontrado!"
+              echo "Estrutura T3 Stack não está correta."
+              exit 1
+            fi
+            
+            # Verificar se o backend foi buildado
+            if [ ! -d "apps/server/.next" ]; then
+              echo "❌ ERRO: Backend .next não encontrado!"
+              echo "O deploy não pode continuar sem o backend buildado."
+              exit 1
+            fi
+            
+            # Verificar se o frontend foi buildado
+            if [ ! -d "apps/web/dist" ]; then
+              echo "❌ ERRO: Frontend dist não encontrado!"
+              echo "O deploy não pode continuar sem o frontend buildado."
+              exit 1
+            fi
+            
+            echo ""
+            echo "=== Estrutura T3 Stack verificada ==="
+            echo "Apps structure:"
+            ls -la apps/ 2>/dev/null || echo "❌ Apps folder not found"
+            echo "Backend .next contents:"
+            ls -la apps/server/.next/ 2>/dev/null || echo "❌ Backend .next not found"
+            echo "Frontend dist contents:"
+            ls -la apps/web/dist/ 2>/dev/null || echo "❌ Frontend dist not found"
+            echo "Packages structure:"
+            ls -la packages/ 2>/dev/null || echo "❌ Packages folder not found"
+            echo ""
+            
+            echo "✅ Estrutura T3 Stack validada com sucesso!"
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -210,37 +212,28 @@ jobs:
             DB_NAME="${{ secrets.DB_NAME }}"
             DB_USER="${{ secrets.DB_USER }}"
             DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"
             
             # Use defaults if secrets are empty
             DB_NAME=${DB_NAME:-"metalgest"}
             DB_USER=${DB_USER:-"postgres"}
             DB_PASSWORD=${DB_PASSWORD:-"postgres123"}
-            JWT_SECRET=${JWT_SECRET:-"your-super-secret-jwt-key-change-in-production"}
-            JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-"your-super-secret-refresh-jwt-key-change-in-production"}
+            NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-"metalgest-secret-key-production-2024"}
+            JWT_SECRET=${JWT_SECRET:-"metalgest-jwt-secret-production-2024"}
             
             # Create environment file
             echo "Creating .env file..."
             cat > .env << EOF
             NODE_ENV=production
-            PORT=3001
-            API_VERSION=v1
-            JWT_SECRET=${JWT_SECRET}
-            JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
             DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-            CORS_ORIGIN=https://metalgest.com.br,https://www.metalgest.com.br,http://metalgest.com.br,http://www.metalgest.com.br
+            NEXTAUTH_URL=https://metalgest.com.br
+            NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+            JWT_SECRET=${JWT_SECRET}
             POSTGRES_DB=${DB_NAME}
             POSTGRES_USER=${DB_USER}
             POSTGRES_PASSWORD=${DB_PASSWORD}
-            ENCRYPTION_KEY=your-encryption-key-32-characters-long
-            EMAIL_USER=noreply@metalgest.com
-            EMAIL_PASS=dummy-password
-            EMAIL_HOST=smtp.gmail.com
-            EMAIL_PORT=587
-            EMAIL_FROM=MetalGest <noreply@metalgest.com>
-            ASAAS_API_KEY=dummy-key
-            MERCADOPAGO_ACCESS_TOKEN=dummy-token
+            NEXT_PUBLIC_API_URL=https://metalgest.com.br
             EOF
             
             echo "✅ Environment file created successfully"
@@ -299,12 +292,12 @@ jobs:
               exit 1
             fi
             
-            # Now start backend
-            echo "Starting backend..."
+            # Now start backend (Next.js server)
+            echo "Starting backend (Next.js server)..."
             docker-compose up -d --build backend
             
             # === Setup Database (handled by entrypoint) ===
-            echo "=== Database setup será gerenciado pelo entrypoint.sh ==="
+            echo "=== Database setup será gerenciado pelo backend startup ==="
             
             # Wait for backend to be healthy with more robust checking
             echo "=== Waiting for backend to be healthy ==="
@@ -322,7 +315,7 @@ jobs:
                 fi
                 
                 # Try direct API call as backup health check
-                if curl -s -f http://localhost:3001/api/v1/health >/dev/null 2>&1; then
+                if curl -s -f http://localhost:3000/api/health >/dev/null 2>&1; then
                   echo "✅ Backend responds to health check (direct) after ${i} attempts"
                   BACKEND_HEALTHY=true
                   break
@@ -343,6 +336,10 @@ jobs:
               docker-compose logs db --tail=10
               # Continue anyway to see nginx behavior
             fi
+            
+            # Start frontend
+            echo "Starting frontend..."
+            docker-compose up -d --build frontend
             
             # Finally start nginx
             echo "Starting nginx..."
@@ -365,20 +362,22 @@ jobs:
             echo "Testing application endpoints..."
             
             # Test direct backend health
-            if curl -s -f http://localhost:3001/api/v1/health 2>/dev/null; then
+            if curl -s -f http://localhost:3000/api/health 2>/dev/null; then
               echo "✅ Direct Backend Health Check - OK"
             else
               echo "⚠️ Direct Backend Health Check - FAILED"
             fi
             
             # Test through nginx proxy
-            if curl -s -f http://localhost:80/api/v1/health 2>/dev/null; then
+            if curl -s -f http://localhost:80/api/health 2>/dev/null; then
               echo "✅ Nginx Proxy API Health Check - OK"
             else
               echo "❌ Nginx Proxy API Health Check - FAILED"
               echo "This indicates nginx reverse proxy issues"
               echo "Backend logs:"
               docker-compose logs backend --tail=10
+              echo "Frontend logs:"
+              docker-compose logs frontend --tail=10
               echo "Nginx logs:"
               docker-compose logs nginx --tail=10
               
@@ -390,7 +389,7 @@ jobs:
               docker-compose exec nginx nginx -t 2>/dev/null || echo "Nginx config test failed"
               
               # Only exit if both backend and nginx are failing
-              if ! curl -s -f http://localhost:3001/api/v1/health 2>/dev/null; then
+              if ! curl -s -f http://localhost:3000/api/health 2>/dev/null; then
                 echo "❌ Critical: Both backend and nginx proxy are failing"
                 echo "🔄 Executing rollback..."
                 bash /var/www/metalgest/rollback.sh
@@ -404,7 +403,7 @@ jobs:
             echo ""
             echo "🎉 DEPLOY SUCCESSFUL!"
             echo "🌐 Application is available at: http://31.97.85.98"
-            echo "📊 API endpoint: http://31.97.85.98/api/v1/health"
+            echo "📊 API endpoint: http://31.97.85.98/api/health"
             echo ""
             echo "📋 Services Status:"
             docker-compose ps --format "table {{.Name}}\t{{.State}}\t{{.Status}}"

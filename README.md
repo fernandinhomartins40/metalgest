@@ -1,26 +1,61 @@
-# MetalGest
+# MetalGest - Monorepo T3 Stack
 
-Sistema de gestão para empresas do setor metalúrgico. Gerencia clientes, orçamentos, ordens de serviço, produção, financeiro, produtos/serviços e DRE.
+Sistema de gestão empresarial moderno construído com T3 Stack em arquitetura monorepo.
 
-## 🚀 Tecnologias Utilizadas
+## 🏗️ Arquitetura
 
-- [React (via Vite)](https://vitejs.dev/)
-- [Tailwind CSS](https://tailwindcss.com/)
+```
+metalgest/
+├── apps/
+│   ├── web/          # Frontend React + Vite + tRPC
+│   └── server/       # Backend Next.js + tRPC + NextAuth
+├── packages/
+│   ├── database/     # Prisma schema e cliente
+│   └── shared/       # Tipos e utilitários compartilhados
+└── [arquivos de configuração do monorepo]
+```
 
-- [Hostinger Horizons](https://www.hostinger.com/horizons)
-- [Mercado Pago API](https://www.mercadopago.com.br/developers/)
+## 🚀 Tecnologias
 
-## 🔧 Como rodar localmente
+### Frontend (apps/web)
+- **React 18** + **Vite** - Framework e bundler
+- **TypeScript** - Tipagem estática
+- **tRPC** - Type-safe API calls
+- **TanStack Query** - Cache e sincronização
+- **Tailwind CSS** - Estilização
+- **Radix UI** - Componentes acessíveis
+- **React Hook Form** - Formulários
+- **Zod** - Validação
 
-```bash
-# Clone o repositório
-git clone https://github.com/fernandinhomartins40/metalgest.git
+### Backend (apps/server)
+- **Next.js 14** - Framework fullstack
+- **tRPC** - Type-safe API
+- **NextAuth.js** - Autenticação
+- **Prisma** - ORM
+- **PostgreSQL** - Database
+- **bcrypt** - Hash de senhas
+- **JWT** - Tokens de autenticação
 
-# Acesse a pasta
-cd metalgest
+### Packages
+- **@metalgest/database** - Prisma client e schemas
+- **@metalgest/shared** - Tipos, schemas e utilitários compartilhados
 
-# Instale as dependências
-npm install
+## 📦 Instalação
 
-# Inicie o projeto
-npm run dev
+1. **Setup inicial:**
+   ```bash
+   node setup.js
+   ```
+
+2. **Configurar database:**
+   ```bash
+   # Editar apps/server/.env com sua URL do PostgreSQL
+   DATABASE_URL="postgresql://username:password@localhost:5432/metalgest"
+   
+   # Rodar migrações
+   npm run db:migrate
+   ```
+
+3. **Iniciar desenvolvimento:**
+   ```bash
+   npm run dev

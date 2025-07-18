@@ -1,89 +1,84 @@
+version: '3.8'
+
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-metalgest}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - /tmp:/tmp
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-metalgest}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 10s
-    command: >
-      postgres 
-      -c log_statement=all 
-      -c log_destination=stderr 
-      -c logging_collector=off
-      -c max_connections=100
-      -c shared_buffers=128MB
+      retries: 5
+    networks:
+      - metalgest-network
 
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     restart: unless-stopped
-    env_file:
-      - ./.env
     environment:
       NODE_ENV: production
-      PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-metalgest}
-      # Configurações específicas para Prisma com Alpine
-      PRISMA_CLI_BINARY_TARGETS: "linux-musl"
-      OPENSSL_CONF: /etc/ssl/
-      # CORS Configuration
-      CORS_ORIGIN: "https://metalgest.com.br,https://www.metalgest.com.br,http://metalgest.com.br,http://www.metalgest.com.br"
-      CORS_CREDENTIALS: "true"
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-metalgest-secret-key-production}
+      JWT_SECRET: ${JWT_SECRET:-metalgest-jwt-secret-production}
     ports:
-      - "3001:3001"
-    networks:
-      - app-network
+      - "3000:3000"
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./apps/server/uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
-      interval: 45s
-      timeout: 15s
-      retries: 6
-      start_period: 90s
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - metalgest-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    networks:
+      - metalgest-network
 
   nginx:
-    image: nginx:1.25-alpine
+    image: nginx:alpine
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./dist:/usr/share/nginx/html:ro
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./ssl/fullchain.pem:/etc/ssl/certs/fullchain.pem:ro
-      - ./ssl/privkey.pem:/etc/ssl/private/privkey.pem:ro
-    networks:
-      - app-network
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./certs:/etc/nginx/certs
     depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
+      - frontend
+      - backend
+    networks:
+      - metalgest-network
 
 volumes:
   postgres_data:
 
 networks:
-  app-network:
+  metalgest-network:
     driver: bridge
