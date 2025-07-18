@@ -25,7 +25,7 @@ const API_BASE_URL = (() => {
     
     // If running on metalgest.com.br or www.metalgest.com.br
     if (hostname.includes('metalgest.com.br')) {
-      const apiUrl = `${protocol}//metalgest.com.br/api/v1`;
+      const apiUrl = `https://metalgest.com.br/api/v1`;
       console.log('✅ Using metalgest.com.br API:', apiUrl);
       return apiUrl;
     }
