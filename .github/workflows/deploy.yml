@@ -30,6 +30,13 @@ jobs:
           echo "NEXT_PUBLIC_API_URL=https://metalgest.com.br" > apps/web/.env.production
           npm run build:web
 
+      - name: Create .env file for Backend
+        run: |
+          echo "DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\"" > apps/server/.env
+          echo "NEXTAUTH_SECRET=\"dummy-secret\"" >> apps/server/.env
+          echo "NEXTAUTH_URL=\"http://localhost:3000\"" >> apps/server/.env
+          echo "JWT_SECRET=\"dummy-jwt-secret\"" >> apps/server/.env
+
       - name: Build Backend
         run: |
           npm run build:server
