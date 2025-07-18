@@ -77,6 +77,12 @@ function Login() {
       } else if (error.message?.includes("inactive")) {
         errorTitle = "⚠️ Conta Inativa"
         errorMessage = "Sua conta está inativa. Entre em contato com o suporte."
+      } else if (error.isNetworkError || error.message?.includes("Failed to fetch")) {
+        errorTitle = "🌐 Erro de Conexão"
+        errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão de internet e tente novamente."
+      } else if (error.isCorsError || error.message?.includes("CORS")) {
+        errorTitle = "🔧 Erro de Configuração"
+        errorMessage = "Problema temporário do servidor. Tente novamente em alguns minutos."
       } else if (error.message) {
         errorMessage = error.message
       }

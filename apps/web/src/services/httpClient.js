@@ -4,7 +4,9 @@
 const API_BASE_URL = (() => {
   // Priority 1: Use environment variable if defined
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    // Add /api suffix if not present
+    return apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
   }
   
   // Priority 2: Auto-detect production environment
@@ -14,17 +16,17 @@ const API_BASE_URL = (() => {
     
     // If running on metalgest.com.br or www.metalgest.com.br
     if (hostname.includes('metalgest.com.br')) {
-      return `https://metalgest.com.br/api/v1`;
+      return `https://metalgest.com.br/api`;
     }
     
     // If running on any other domain (not localhost)
     if (!hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
-      return `${protocol}//${hostname}/api/v1`;
+      return `${protocol}//${hostname}/api`;
     }
   }
   
   // Priority 3: Development fallback
-  return 'http://localhost:3001/api/v1';
+  return 'http://localhost:3001/api';
 })();
 
 // Token management
