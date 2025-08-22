@@ -84,8 +84,8 @@ npm run db:studio       # Interface web do banco
 
 ### Health Checks
 
-- **Backend**: `http://servidor/api/health`
-- **Frontend**: `http://servidor/`
+- **Backend**: `http://72.60.10.112:3002/api/health`
+- **Frontend**: `http://72.60.10.112:3002/`
 - **Nginx**: Status dos proxies
 
 ### Logs
@@ -127,7 +127,7 @@ O script:
 
 ```bash
 # Testar conectividade
-curl http://localhost/api/health
+curl http://72.60.10.112:3002/api/health
 
 # Verificar containers
 docker-compose ps
@@ -142,10 +142,10 @@ docker-compose logs --tail=50
 ```env
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@db:5432/metalgest
-NEXTAUTH_URL=https://metalgest.com.br
+NEXTAUTH_URL=http://72.60.10.112:3002
 NEXTAUTH_SECRET=chave-secreta-nextauth
 JWT_SECRET=chave-secreta-jwt
-NEXT_PUBLIC_API_URL=https://metalgest.com.br
+NEXT_PUBLIC_API_URL=http://72.60.10.112:3002
 ```
 
 ### Desenvolvimento (.env.development)
