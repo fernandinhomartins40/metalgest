@@ -1,4 +1,4 @@
-name: Deploy to Hostinger VPS
+name: Deploy Simplificado - VPS 72.60.10.112
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - main
 
 jobs:
-  build:
-    name: Build T3 Stack Application
+  deploy:
+    name: Deploy Completo
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,427 +19,196 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install dependencies and build
         run: |
           npm ci
           npm run db:generate
-
-      - name: Build Frontend
-        run: |
-          # Set production API URL for build
-          echo "NEXT_PUBLIC_API_URL=https://metalgest.com.br" > apps/web/.env.production
+          
+          # Build Frontend
+          echo "NEXT_PUBLIC_API_URL=http://72.60.10.112:3002" > apps/web/.env.production
           npm run build:web
-
-      - name: Create .env file for Backend
-        run: |
+          
+          # Create .env for Backend build
           echo "NODE_ENV=production" > apps/server/.env
           echo "DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\"" >> apps/server/.env
           echo "NEXTAUTH_SECRET=\"dummy-secret-for-build\"" >> apps/server/.env
-          echo "NEXTAUTH_URL=\"https://metalgest.com.br\"" >> apps/server/.env
+          echo "NEXTAUTH_URL=\"http://72.60.10.112:3002\"" >> apps/server/.env
           echo "JWT_SECRET=\"dummy-jwt-secret-for-build\"" >> apps/server/.env
-          echo "NEXT_PUBLIC_API_URL=\"https://metalgest.com.br\"" >> apps/server/.env
-
-      - name: Build Backend (Turbo)
-        run: |
-          # Limpar cache do turbo para evitar problemas
-          rm -rf apps/server/.turbo
-          rm -rf apps/server/.next
+          echo "NEXT_PUBLIC_API_URL=\"http://72.60.10.112:3002\"" >> apps/server/.env
           
-          # Executar build do backend
-          npm run build:server || (echo "❌ Falha no build do backend" && exit 1)
-
-          echo "✅ Verificando se apps/server/.next foi gerado..."
-          if [ ! -d "apps/server/.next" ]; then
-            echo "❌ ERRO: Diretório apps/server/.next não foi criado!"
-            echo "Listando conteúdo do diretório apps/server:"
-            ls -la apps/server/
-            echo "Verificando estrutura do projeto:"
-            find apps/server -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | head -20
-            exit 1
-          fi
-
-          echo "✅ Diretório .next criado com sucesso!"
-          echo "Conteúdo do diretório .next:"
-          ls -la apps/server/.next
+          # Build Backend
+          npm run build:server
           
-          # Verificar se arquivos essenciais estão presentes
-          if [ ! -f "apps/server/.next/BUILD_ID" ]; then
-            echo "❌ ERRO: BUILD_ID não encontrado!"
-            echo "Conteúdo completo do diretório .next:"
-            find apps/server/.next -type f | head -20
-            exit 1
-          fi
-          
-          echo "✅ Build do backend concluído com sucesso!"
-          echo "BUILD_ID: $(cat apps/server/.next/BUILD_ID)"
+          # Verificar builds
+          echo "✅ Frontend build:"
+          ls -la apps/web/dist/
+          echo "✅ Backend build:"
+          ls -la apps/server/.next/
 
-      - name: Upload Frontend Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: apps/web/dist
-
-      - name: Upload Backend Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-build
-          path: apps/server/.next
-
-      - name: Upload Packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: packages
-          path: packages
-
-  deploy:
-    name: Deploy to VPS
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Download Frontend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: apps/web/dist
-
-      - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-build
-          path: apps/server/.next
-
-      - name: Download Packages
-        uses: actions/download-artifact@v4
-        with:
-          name: packages
-          path: packages
-
-      - name: Checkout code for deploy files
-        uses: actions/checkout@v4
-        with:
-          path: source
-          
-      - name: Create VPS directories
-        uses: appleboy/ssh-action@master
-        with:
-          host: 31.97.85.98
-          username: root
-          password: ${{ secrets.VPS_PASSWORD }}
-          script: |
-            mkdir -p /var/www/metalgest
-            mkdir -p /var/www/metalgest/backend
-            mkdir -p /var/www/metalgest/nginx
-            
-      - name: Transfer files to VPS
-        uses: appleboy/scp-action@master
-        with:
-          host: 31.97.85.98
-          username: root
-          password: ${{ secrets.VPS_PASSWORD }}
-          source: "source/Dockerfile.backend,source/Dockerfile.frontend,source/docker-compose.yml,source/entrypoint.sh,source/rollback.sh,source/package.json,source/turbo.json,source/apps,source/packages,source/nginx,apps/web/dist,apps/server/.next,packages"
-          target: "/var/www/metalgest"
-          strip_components: 1
-          debug: true
-          
-      - name: Ensure T3 Stack structure
-        uses: appleboy/ssh-action@master
-        with:
-          host: 31.97.85.98
-          username: root
-          password: ${{ secrets.VPS_PASSWORD }}
-          script: |
-            cd /var/www/metalgest
-            
-            # Verifica e cria estrutura do T3 Stack se necessário
-            echo "=== Verificando estrutura T3 Stack ==="
-            echo "Conteúdo da pasta atual:"
-            ls -la
-            echo ""
-            echo "Estrutura de diretórios:"
-            find . -type d -name "apps" -o -name "packages" -o -name ".next" 2>/dev/null || echo "Nenhum diretório T3 Stack encontrado"
-            echo ""
-            
-            # Verificar se a estrutura do T3 Stack está correta
-            if [ ! -d "apps" ]; then
-              echo "❌ ERRO: Diretório apps não encontrado!"
-              echo "Estrutura T3 Stack não está correta."
-              exit 1
-            fi
-            
-            if [ ! -d "packages" ]; then
-              echo "❌ ERRO: Diretório packages não encontrado!"
-              echo "Estrutura T3 Stack não está correta."
-              exit 1
-            fi
-            
-            # Verificar se o backend foi buildado
-            if [ ! -d "apps/server/.next" ]; then
-              echo "❌ ERRO: Backend .next não encontrado!"
-              echo "O deploy não pode continuar sem o backend buildado."
-              exit 1
-            fi
-            
-            # Verificar se o frontend foi buildado
-            if [ ! -d "apps/web/dist" ]; then
-              echo "❌ ERRO: Frontend dist não encontrado!"
-              echo "O deploy não pode continuar sem o frontend buildado."
-              exit 1
-            fi
-            
-            echo ""
-            echo "=== Estrutura T3 Stack verificada ==="
-            echo "Apps structure:"
-            ls -la apps/ 2>/dev/null || echo "❌ Apps folder not found"
-            echo "Backend .next contents:"
-            ls -la apps/server/.next/ 2>/dev/null || echo "❌ Backend .next not found"
-            echo "Frontend dist contents:"
-            ls -la apps/web/dist/ 2>/dev/null || echo "❌ Frontend dist not found"
-            echo "Packages structure:"
-            ls -la packages/ 2>/dev/null || echo "❌ Packages folder not found"
-            echo ""
-            
-            echo "✅ Estrutura T3 Stack validada com sucesso!"
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
-        with:
-          host: 31.97.85.98
-          username: root
-          password: ${{ secrets.VPS_PASSWORD }}
-          script: |
-            cd /var/www/metalgest
-            
-            # === Install Docker and Docker Compose ===
-            echo "=== Installing Docker and Docker Compose ==="
-            
-            # Update system
-            apt-get update -y
-            
-            # Install Docker if not present
+        env:
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          # Configurar variáveis
+          VPS_HOST="72.60.10.112"
+          VPS_USER="root"
+          DEPLOY_PATH="/var/www/metalgest"
+          
+          echo "🚀 Iniciando deploy para VPS ${VPS_HOST}:3002"
+          
+          # Função para executar comandos SSH
+          ssh_exec() {
+            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$VPS_USER@$VPS_HOST" "$1"
+          }
+          
+          # Função para copiar arquivos
+          scp_copy() {
+            sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r "$1" "$VPS_USER@$VPS_HOST:$2"
+          }
+          
+          # 1. Preparar diretórios na VPS
+          echo "📁 Preparando diretórios na VPS..."
+          ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true"
+          
+          # 2. Copiar arquivos essenciais
+          echo "📦 Copiando arquivos para VPS..."
+          scp_copy "docker-compose.yml" "$DEPLOY_PATH/"
+          scp_copy "Dockerfile.backend" "$DEPLOY_PATH/"
+          scp_copy "Dockerfile.frontend" "$DEPLOY_PATH/"
+          scp_copy "package.json" "$DEPLOY_PATH/"
+          scp_copy "turbo.json" "$DEPLOY_PATH/"
+          scp_copy "entrypoint.sh" "$DEPLOY_PATH/"
+          scp_copy "rollback.sh" "$DEPLOY_PATH/"
+          scp_copy "nginx/" "$DEPLOY_PATH/"
+          scp_copy "apps/" "$DEPLOY_PATH/"
+          scp_copy "packages/" "$DEPLOY_PATH/"
+          
+          # 3. Instalar Docker na VPS (se necessário)
+          echo "🐳 Verificando Docker na VPS..."
+          ssh_exec "
             if ! command -v docker &> /dev/null; then
-              echo "Installing Docker..."
+              echo '📥 Instalando Docker...'
+              apt-get update -y
               curl -fsSL https://get.docker.com -o get-docker.sh
               sh get-docker.sh
               systemctl enable docker
               systemctl start docker
               rm get-docker.sh
-            else
-              echo "✅ Docker already installed"
             fi
             
-            # Install Docker Compose if not present
             if ! command -v docker-compose &> /dev/null; then
-              echo "Installing Docker Compose..."
-              curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              echo '📥 Instalando Docker Compose...'
+              curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
               chmod +x /usr/local/bin/docker-compose
               ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-            else
-              echo "✅ Docker Compose already installed"
             fi
             
-            # Verify installations
+            echo '✅ Docker e Docker Compose instalados:'
             docker --version
             docker-compose --version
+          "
+          
+          # 4. Configurar ambiente e fazer deploy
+          echo "⚙️ Configurando ambiente e fazendo deploy..."
+          ssh_exec "
+            cd $DEPLOY_PATH
             
-            # === Configure Environment Variables ===
-            echo "=== Configuring Environment ==="
-            
-            # Set default values if secrets are not defined
-            DB_NAME="${{ secrets.DB_NAME }}"
-            DB_USER="${{ secrets.DB_USER }}"
-            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
-            JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            
-            # Use defaults if secrets are empty
-            DB_NAME=${DB_NAME:-"metalgest"}
-            DB_USER=${DB_USER:-"postgres"}
-            DB_PASSWORD=${DB_PASSWORD:-"postgres123"}
-            NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-"metalgest-secret-key-production-2024"}
-            JWT_SECRET=${JWT_SECRET:-"metalgest-jwt-secret-production-2024"}
-            
-            # Create environment file
-            echo "Creating .env file..."
+            # Criar arquivo .env
             cat > .env << EOF
-            NODE_ENV=production
-            DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-            NEXTAUTH_URL=https://metalgest.com.br
-            NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-            JWT_SECRET=${JWT_SECRET}
-            POSTGRES_DB=${DB_NAME}
-            POSTGRES_USER=${DB_USER}
-            POSTGRES_PASSWORD=${DB_PASSWORD}
-            NEXT_PUBLIC_API_URL=https://metalgest.com.br
-            EOF
+          NODE_ENV=production
+          DATABASE_URL=postgresql://postgres:postgres123@db:5432/metalgest
+          NEXTAUTH_URL=http://72.60.10.112:3002
+          NEXTAUTH_SECRET=metalgest-secret-key-production-$(date +%s)
+          JWT_SECRET=metalgest-jwt-secret-production-$(date +%s)
+          POSTGRES_DB=metalgest
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres123
+          NEXT_PUBLIC_API_URL=http://72.60.10.112:3002
+          EOF
             
-            echo "✅ Environment file created successfully"
-            echo "Database config: ${DB_USER}@db:5432/${DB_NAME}"
+            echo '✅ Arquivo .env criado'
             
-            # === Setup Nginx Configuration ===
-            echo "=== Setting up Nginx ==="
-            echo "✅ Using nginx/default.conf configuration"
+            # Parar containers existentes
+            echo '🛑 Parando containers existentes...'
+            docker-compose down -v 2>/dev/null || true
+            docker system prune -f 2>/dev/null || true
             
-            # === Clean Up Previous Deployment ===
-            echo "=== Cleaning up previous deployment ==="
+            # Tornar scripts executáveis
+            chmod +x entrypoint.sh rollback.sh
             
-            # Stop and remove containers
-            docker-compose down -v 2>/dev/null || echo "No containers to stop"
-            
-            # Remove unused images and volumes
-            docker system prune -f 2>/dev/null || echo "Docker cleanup completed"
-            
-            # Stop system nginx if running
-            systemctl stop nginx 2>/dev/null || echo "System nginx not running"
-            
-            # === Deploy Application ===
-            # === Create backup before deploy ===
-            echo "=== Creating backup before deploy ==="
-            TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+            # Fazer backup
+            echo '💾 Criando backup...'
+            TIMESTAMP=\$(date +\"%Y%m%d_%H%M%S\")
             mkdir -p /var/www/metalgest-backup
-            if [ -d "/var/www/metalgest" ]; then
-              cp -r /var/www/metalgest /var/www/metalgest-backup/deploy-$TIMESTAMP
-              echo "✅ Backup created: /var/www/metalgest-backup/deploy-$TIMESTAMP"
-            fi
+            cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-\$TIMESTAMP
             
-            # Make rollback script executable
-            chmod +x /var/www/metalgest/rollback.sh
+            # Iniciar serviços
+            echo '🚀 Iniciando serviços...'
             
-            echo "=== Deploying application ==="
-            
-            # Build and start containers (database first)
-            echo "Starting database..."
+            # Banco de dados primeiro
+            echo '🗄️ Iniciando banco de dados...'
             docker-compose up -d db
             
-            # Wait for database using docker-compose health check
-            echo "=== Waiting for database ==="
+            # Aguardar banco ficar saudável
+            echo '⏳ Aguardando banco de dados...'
             for i in {1..30}; do
-              if docker-compose ps db | grep -q "healthy"; then
-                echo "✅ Database is healthy after ${i} attempts"
+              if docker-compose ps db | grep -q \"healthy\"; then
+                echo \"✅ Banco de dados pronto após \$i tentativas\"
                 break
               fi
-              echo "Database not healthy yet, attempt ${i}/30..."
+              echo \"Tentativa \$i/30...\"
               sleep 3
             done
             
-            # Verify database is really ready
-            if ! docker-compose ps db | grep -q "healthy"; then
-              echo "❌ Database failed to start, checking logs..."
-              docker-compose logs db --tail=30
+            # Backend
+            echo '🔧 Iniciando backend...'
+            docker-compose up -d --build backend
+            
+            # Aguardar backend
+            echo '⏳ Aguardando backend...'
+            for i in {1..60}; do
+              if curl -s -f http://localhost:3000/api/health >/dev/null 2>&1; then
+                echo \"✅ Backend pronto após \$i tentativas\"
+                break
+              fi
+              echo \"Tentativa \$i/60...\"
+              sleep 5
+            done
+            
+            # Frontend e Nginx
+            echo '🌐 Iniciando frontend e nginx...'
+            docker-compose up -d --build frontend nginx
+            
+            # Aguardar aplicação completa
+            echo '⏳ Aguardando aplicação completa...'
+            sleep 15
+            
+            # Testes finais
+            echo '🧪 Testando aplicação...'
+            
+            echo \"Status dos containers:\"
+            docker-compose ps
+            
+            if curl -s -f http://localhost:3002/api/health >/dev/null 2>&1; then
+              echo \"✅ Aplicação funcionando em http://72.60.10.112:3002\"
+              echo \"✅ API health check: OK\"
+            else
+              echo \"❌ Falha no health check\"
+              echo \"Logs do backend:\"
+              docker-compose logs backend --tail=10
+              echo \"Logs do nginx:\"
+              docker-compose logs nginx --tail=10
               exit 1
             fi
             
-            # Now start backend (Next.js server)
-            echo "Starting backend (Next.js server)..."
-            docker-compose up -d --build backend
-            
-            # === Setup Database (handled by entrypoint) ===
-            echo "=== Database setup será gerenciado pelo backend startup ==="
-            
-            # Wait for backend to be healthy with more robust checking
-            echo "=== Waiting for backend to be healthy ==="
-            BACKEND_HEALTHY=false
-            for i in {1..90}; do
-              # Check if backend container is running first
-              if docker-compose ps backend | grep -q "Up"; then
-                echo "Backend container is running..."
-                
-                # Check health status
-                if docker-compose ps backend | grep -q "healthy"; then
-                  echo "✅ Backend is healthy after ${i} attempts"
-                  BACKEND_HEALTHY=true
-                  break
-                fi
-                
-                # Try direct API call as backup health check
-                if curl -s -f http://localhost:3000/api/health >/dev/null 2>&1; then
-                  echo "✅ Backend responds to health check (direct) after ${i} attempts"
-                  BACKEND_HEALTHY=true
-                  break
-                fi
-              else
-                echo "Backend container not running yet..."
-              fi
-              
-              echo "Backend not healthy yet, attempt ${i}/90..."
-              sleep 7
-            done
-            
-            if [ "$BACKEND_HEALTHY" = false ]; then
-              echo "❌ Backend failed to become healthy, checking logs..."
-              echo "Backend logs:"
-              docker-compose logs backend --tail=30
-              echo "Database logs:"
-              docker-compose logs db --tail=10
-              # Continue anyway to see nginx behavior
-            fi
-            
-            # Start frontend
-            echo "Starting frontend..."
-            docker-compose up -d --build frontend
-            
-            # Finally start nginx
-            echo "Starting nginx..."
-            docker-compose up -d nginx
-            
-            # === Final Health Checks ===
-            echo "=== Final Health Checks ==="
-            
-            # Wait a bit for nginx to be ready
-            sleep 10
-            
-            # Show final container status
-            echo "Container Status:"
-            docker-compose ps
-            
-            # Test application through nginx
-            echo "=== Testing Application ==="
-            
-            # Try multiple endpoints to ensure everything works
-            echo "Testing application endpoints..."
-            
-            # Test direct backend health
-            if curl -s -f http://localhost:3000/api/health 2>/dev/null; then
-              echo "✅ Direct Backend Health Check - OK"
-            else
-              echo "⚠️ Direct Backend Health Check - FAILED"
-            fi
-            
-            # Test through nginx proxy
-            if curl -s -f http://localhost:80/api/health 2>/dev/null; then
-              echo "✅ Nginx Proxy API Health Check - OK"
-            else
-              echo "❌ Nginx Proxy API Health Check - FAILED"
-              echo "This indicates nginx reverse proxy issues"
-              echo "Backend logs:"
-              docker-compose logs backend --tail=10
-              echo "Frontend logs:"
-              docker-compose logs frontend --tail=10
-              echo "Nginx logs:"
-              docker-compose logs nginx --tail=10
-              
-              # Don't exit immediately, show more diagnostics
-              echo "=== Diagnostic Information ==="
-              echo "Container status:"
-              docker-compose ps
-              echo "Nginx config test:"
-              docker-compose exec nginx nginx -t 2>/dev/null || echo "Nginx config test failed"
-              
-              # Only exit if both backend and nginx are failing
-              if ! curl -s -f http://localhost:3000/api/health 2>/dev/null; then
-                echo "❌ Critical: Both backend and nginx proxy are failing"
-                echo "🔄 Executing rollback..."
-                bash /var/www/metalgest/rollback.sh
-                exit 1
-              else
-                echo "⚠️ Backend works directly but nginx proxy fails - continuing deployment"
-              fi
-            fi
-            
-            # Final success message
-            echo ""
-            echo "🎉 DEPLOY SUCCESSFUL!"
-            echo "🌐 Application is available at: http://31.97.85.98"
-            echo "📊 API endpoint: http://31.97.85.98/api/health"
-            echo ""
-            echo "📋 Services Status:"
-            docker-compose ps --format "table {{.Name}}\t{{.State}}\t{{.Status}}"
+            echo \"\"
+            echo \"🎉 DEPLOY CONCLUÍDO COM SUCESSO!\"
+            echo \"🌐 Aplicação disponível em: http://72.60.10.112:3002\"
+            echo \"📊 Health check: http://72.60.10.112:3002/api/health\"
+            echo \"\"
+          "
+          
+          echo "✅ Deploy finalizado com sucesso!"
