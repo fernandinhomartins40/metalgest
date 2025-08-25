@@ -93,7 +93,7 @@ jobs:
             node --version
             npm --version
             pm2 --version
-            nginx -version
+            nginx -v
           "
           
           # 4. Configurar ambiente e fazer deploy
