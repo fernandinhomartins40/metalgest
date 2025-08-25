@@ -1,5 +1,5 @@
 services:
-  # Novo Backend Node.js + SQLite3
+  # Backend Node.js + SQLite3 (isolado)
   backend:
     build:
       context: ./backend
@@ -11,9 +11,9 @@ services:
       DATABASE_PATH: /app/data/sqlite.db
       JWT_SECRET: ${JWT_SECRET:-metalgest-jwt-secret-production}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-metalgest-refresh-secret-production}
-      FRONTEND_URL: ${FRONTEND_URL:-http://72.60.10.112:3002}
-    ports:
-      - "3010:3010"
+      FRONTEND_URL: ${FRONTEND_URL:-http://72.60.10.112:3010}
+    expose:
+      - "3010"
     volumes:
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
@@ -41,12 +41,12 @@ services:
     networks:
       - metalgest-network
 
-  # Nginx Proxy
+  # Nginx Proxy - Única porta exposta
   nginx:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "3002:80"
+      - "3010:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
