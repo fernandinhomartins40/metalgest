@@ -34,8 +34,8 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://72.60.10.112:3010/api}
-    ports:
-      - "3001:3000"
+    expose:
+      - "3000"
     depends_on:
       - backend
     networks:
