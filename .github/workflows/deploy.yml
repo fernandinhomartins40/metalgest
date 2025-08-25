@@ -19,19 +19,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies and build
+      - name: Preparar arquivos para deploy
         run: |
-          # Build Frontend
-          cd apps/web
-          echo "VITE_API_URL=http://72.60.10.112:3010/api" > .env.production
-          npm ci
-          npm run build
-          
-          # Verificar builds
-          echo "✅ Frontend build:"
-          ls -la dist/
-          echo "✅ Backend files:"
-          cd ../../
+          # Apenas verificar estrutura - build será feito no Docker
+          echo "📁 Verificando estrutura do projeto:"
+          ls -la
+          echo "✅ Frontend source:"
+          ls -la apps/web/
+          echo "✅ Backend source:"
           ls -la backend/
 
       - name: Install sshpass
@@ -66,52 +61,33 @@ jobs:
           fi
           echo "✅ Diretórios preparados"
           
-          # 2. Copiar arquivos essenciais
-          echo "📦 Copiando arquivos para VPS..."
+          # 2. Copiar todos os arquivos de uma vez
+          echo "📦 Criando pacote para deploy..."
+          tar -czf deploy.tar.gz \
+            docker-compose.yml \
+            Dockerfile.frontend \
+            Dockerfile.backend \
+            nginx/ \
+            apps/ \
+            backend/ \
+            package.json \
+            package-lock.json 2>/dev/null || tar -czf deploy.tar.gz \
+            docker-compose.yml \
+            Dockerfile.frontend \
+            Dockerfile.backend \
+            nginx/ \
+            apps/ \
+            backend/ \
+            package.json
           
-          echo "📦 Copiando arquivos de configuração..."
-          if ! scp_copy "docker-compose.yml" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar docker-compose.yml"
+          echo "📦 Enviando pacote para VPS..."
+          if ! scp_copy "deploy.tar.gz" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao enviar pacote"
             exit 1
           fi
           
-          echo "📦 Copiando Dockerfiles..."
-          if ! scp_copy "Dockerfile.frontend" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar Dockerfile.frontend"
-            exit 1
-          fi
-          
-          if ! scp_copy "Dockerfile.backend" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar Dockerfile.backend"
-            exit 1
-          fi
-          
-          echo "📦 Copiando nginx..."
-          if ! scp_copy "nginx/" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar nginx"
-            exit 1
-          fi
-          
-          echo "📦 Copiando código fonte..."
-          if ! scp_copy "apps/" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar apps"
-            exit 1
-          fi
-          
-          if ! scp_copy "backend/" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar backend"
-            exit 1
-          fi
-          
-          echo "📦 Copiando arquivos package..."
-          if ! scp_copy "package.json" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao copiar package.json"
-            exit 1
-          fi
-          
-          if ! scp_copy "package-lock.json" "$DEPLOY_PATH/" 2>/dev/null || true; then
-            echo "⚠️  package-lock.json não encontrado (opcional)"
-          fi
+          echo "📦 Extraindo pacote na VPS..."
+          ssh_exec "cd $DEPLOY_PATH && tar -xzf deploy.tar.gz && rm deploy.tar.gz"
           
           echo "✅ Arquivos copiados com sucesso"
           
@@ -167,26 +143,24 @@ jobs:
             cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-current
           "
           
-          # 7. Build containers sequencialmente
+          # 7. Build containers com cache
           echo "🔧 Construindo containers..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose build --no-cache backend"
-          echo "🔧 Construindo frontend..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose build --no-cache frontend"
+          ssh_exec "cd $DEPLOY_PATH && docker-compose build"
           
           # 8. Iniciar containers
           echo "🚀 Iniciando containers..."
           ssh_exec "cd $DEPLOY_PATH && docker-compose up -d"
           
-          # 9. Aguardar containers
+          # 9. Aguardar containers (tempo reduzido)
           echo "⏳ Aguardando containers..."
           ssh_exec "
-            for i in {1..60}; do
+            for i in {1..30}; do
               if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
                 echo \"✅ Aplicação pronta após \$i tentativas\"
                 break
               fi
-              echo \"Tentativa \$i/60...\"
-              sleep 5
+              echo \"Tentativa \$i/30...\"
+              sleep 3
             done
           "
           
