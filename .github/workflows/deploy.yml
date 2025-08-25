@@ -59,7 +59,7 @@ jobs:
           
           # 1. Preparar diretórios na VPS
           echo "📁 Preparando diretórios na VPS..."
-          ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true"
+          ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true && mkdir -p frontend backend nginx"
           
           # 2. Copiar arquivos essenciais
           echo "📦 Copiando arquivos para VPS..."
