@@ -1,4 +1,4 @@
-name: Deploy Simplificado - VPS 72.60.10.112
+name: Deploy MetalGest - Node.js + SQLite - VPS 72.60.10.112
 
 on:
   push:
@@ -22,28 +22,16 @@ jobs:
       - name: Install dependencies and build
         run: |
           npm ci
-          npm run db:generate
           
           # Build Frontend
-          echo "NEXT_PUBLIC_API_URL=http://72.60.10.112:3002" > apps/web/.env.production
-          npm run build:web
-          
-          # Create .env for Backend build
-          echo "NODE_ENV=production" > apps/server/.env
-          echo "DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\"" >> apps/server/.env
-          echo "NEXTAUTH_SECRET=\"dummy-secret-for-build\"" >> apps/server/.env
-          echo "NEXTAUTH_URL=\"http://72.60.10.112:3002\"" >> apps/server/.env
-          echo "JWT_SECRET=\"dummy-jwt-secret-for-build\"" >> apps/server/.env
-          echo "NEXT_PUBLIC_API_URL=\"http://72.60.10.112:3002\"" >> apps/server/.env
-          
-          # Build Backend
-          npm run build:server
+          echo "VITE_API_URL=http://72.60.10.112:3010/api" > apps/web/.env.production
+          npm run build:frontend
           
           # Verificar builds
           echo "✅ Frontend build:"
           ls -la apps/web/dist/
-          echo "✅ Backend build:"
-          ls -la apps/server/.next/
+          echo "✅ Backend files:"
+          ls -la backend/
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
@@ -57,7 +45,7 @@ jobs:
           VPS_USER="root"
           DEPLOY_PATH="/var/www/metalgest"
           
-          echo "🚀 Iniciando deploy para VPS ${VPS_HOST}:3002"
+          echo "🚀 Iniciando deploy para VPS ${VPS_HOST}:3010"
           
           # Função para executar comandos SSH
           ssh_exec() {
@@ -75,40 +63,37 @@ jobs:
           
           # 2. Copiar arquivos essenciais
           echo "📦 Copiando arquivos para VPS..."
-          scp_copy "docker-compose.yml" "$DEPLOY_PATH/"
-          scp_copy "Dockerfile.backend" "$DEPLOY_PATH/"
-          scp_copy "Dockerfile.frontend" "$DEPLOY_PATH/"
           scp_copy "package.json" "$DEPLOY_PATH/"
-          scp_copy "turbo.json" "$DEPLOY_PATH/"
-          scp_copy "entrypoint.sh" "$DEPLOY_PATH/"
-          scp_copy "rollback.sh" "$DEPLOY_PATH/"
           scp_copy "nginx/" "$DEPLOY_PATH/"
-          scp_copy "apps/" "$DEPLOY_PATH/"
-          scp_copy "packages/" "$DEPLOY_PATH/"
+          scp_copy "apps/web/dist/" "$DEPLOY_PATH/frontend/"
+          scp_copy "backend/" "$DEPLOY_PATH/backend/"
           
-          # 3. Instalar Docker na VPS (se necessário)
-          echo "🐳 Verificando Docker na VPS..."
+          # 3. Instalar Node.js na VPS (se necessário)
+          echo "📦 Verificando Node.js na VPS..."
           ssh_exec "
-            if ! command -v docker &> /dev/null; then
-              echo '📥 Instalando Docker...'
+            if ! command -v node &> /dev/null; then
+              echo '📥 Instalando Node.js 18...'
+              curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+              apt-get install -y nodejs
+            fi
+            
+            if ! command -v pm2 &> /dev/null; then
+              echo '📥 Instalando PM2...'
+              npm install -g pm2
+            fi
+            
+            if ! command -v nginx &> /dev/null; then
+              echo '📥 Instalando Nginx...'
               apt-get update -y
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              sh get-docker.sh
-              systemctl enable docker
-              systemctl start docker
-              rm get-docker.sh
+              apt-get install -y nginx
+              systemctl enable nginx
             fi
             
-            if ! command -v docker-compose &> /dev/null; then
-              echo '📥 Instalando Docker Compose...'
-              curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
-              chmod +x /usr/local/bin/docker-compose
-              ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-            fi
-            
-            echo '✅ Docker e Docker Compose instalados:'
-            docker --version
-            docker-compose --version
+            echo '✅ Ferramentas instaladas:'
+            node --version
+            npm --version
+            pm2 --version
+            nginx -version
           "
           
           # 4. Configurar ambiente e fazer deploy
@@ -116,99 +101,114 @@ jobs:
           ssh_exec "
             cd $DEPLOY_PATH
             
-            # Criar arquivo .env
-            cat > .env << EOF
+            # Criar arquivo .env para o backend
+            cat > backend/.env << EOF
           NODE_ENV=production
-          DATABASE_URL=postgresql://postgres:postgres123@db:5432/metalgest
-          NEXTAUTH_URL=http://72.60.10.112:3002
-          NEXTAUTH_SECRET=metalgest-secret-key-production-$(date +%s)
+          PORT=3010
           JWT_SECRET=metalgest-jwt-secret-production-$(date +%s)
-          POSTGRES_DB=metalgest
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres123
-          NEXT_PUBLIC_API_URL=http://72.60.10.112:3002
+          REFRESH_TOKEN_SECRET=metalgest-refresh-secret-production-$(date +%s)
+          DATABASE_PATH=./src/database/sqlite.db
           EOF
             
-            echo '✅ Arquivo .env criado'
+            echo '✅ Arquivo .env do backend criado'
             
-            # Parar containers existentes
-            echo '🛑 Parando containers existentes...'
-            docker-compose down -v 2>/dev/null || true
-            docker system prune -f 2>/dev/null || true
-            
-            # Tornar scripts executáveis
-            chmod +x entrypoint.sh rollback.sh
+            # Parar aplicação existente
+            echo '🛑 Parando aplicação existente...'
+            pm2 delete metalgest-backend 2>/dev/null || true
             
             # Fazer backup
             echo '💾 Criando backup...'
             TIMESTAMP=\$(date +\"%Y%m%d_%H%M%S\")
             mkdir -p /var/www/metalgest-backup
-            cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-\$TIMESTAMP
+            if [ -d \"/var/www/metalgest-backup/deploy-current\" ]; then
+              mv /var/www/metalgest-backup/deploy-current /var/www/metalgest-backup/deploy-\$TIMESTAMP
+            fi
+            cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-current
             
-            # Iniciar serviços
-            echo '🚀 Iniciando serviços...'
+            # Instalar dependências do backend
+            echo '📦 Instalando dependências do backend...'
+            cd $DEPLOY_PATH/backend
+            npm install --production
             
-            # Banco de dados primeiro
-            echo '🗄️ Iniciando banco de dados...'
-            docker-compose up -d db
+            # Migrar e popular banco de dados
+            echo '🗄️ Configurando banco de dados...'
+            npm run migrate
+            npm run seed
             
-            # Aguardar banco ficar saudável
-            echo '⏳ Aguardando banco de dados...'
+            # Iniciar backend com PM2
+            echo '🔧 Iniciando backend...'
+            pm2 start server.js --name \"metalgest-backend\" --env production
+            
+            # Aguardar backend
+            echo '⏳ Aguardando backend...'
             for i in {1..30}; do
-              if docker-compose ps db | grep -q \"healthy\"; then
-                echo \"✅ Banco de dados pronto após \$i tentativas\"
+              if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
+                echo \"✅ Backend pronto após \$i tentativas\"
                 break
               fi
               echo \"Tentativa \$i/30...\"
               sleep 3
             done
             
-            # Backend
-            echo '🔧 Iniciando backend...'
-            docker-compose up -d --build backend
+            # Configurar Nginx
+            echo '🌐 Configurando Nginx...'
+            cat > /etc/nginx/sites-available/metalgest << 'NGINXEOF'
+          server {
+              listen 80;
+              server_name 72.60.10.112;
+              
+              # Frontend estático
+              location / {
+                  root $DEPLOY_PATH/frontend;
+                  index index.html;
+                  try_files \$uri \$uri/ /index.html;
+              }
+              
+              # API Backend
+              location /api/ {
+                  proxy_pass http://localhost:3010;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
+                  proxy_cache_bypass \$http_upgrade;
+              }
+          }
+          NGINXEOF
             
-            # Aguardar backend
-            echo '⏳ Aguardando backend...'
-            for i in {1..60}; do
-              if curl -s -f http://localhost:3000/api/health >/dev/null 2>&1; then
-                echo \"✅ Backend pronto após \$i tentativas\"
-                break
-              fi
-              echo \"Tentativa \$i/60...\"
-              sleep 5
-            done
+            # Ativar site
+            ln -sf /etc/nginx/sites-available/metalgest /etc/nginx/sites-enabled/
+            rm -f /etc/nginx/sites-enabled/default
+            nginx -t && systemctl reload nginx
             
-            # Frontend e Nginx
-            echo '🌐 Iniciando frontend e nginx...'
-            docker-compose up -d --build frontend nginx
-            
-            # Aguardar aplicação completa
-            echo '⏳ Aguardando aplicação completa...'
-            sleep 15
+            # Salvar configuração PM2
+            pm2 save
+            pm2 startup
             
             # Testes finais
             echo '🧪 Testando aplicação...'
             
-            echo \"Status dos containers:\"
-            docker-compose ps
-            
-            if curl -s -f http://localhost:3002/api/health >/dev/null 2>&1; then
-              echo \"✅ Aplicação funcionando em http://72.60.10.112:3002\"
+            if curl -s -f http://localhost/api/health >/dev/null 2>&1; then
+              echo \"✅ Aplicação funcionando em http://72.60.10.112\"
               echo \"✅ API health check: OK\"
+              echo \"\"
+              echo \"🎉 DEPLOY CONCLUÍDO COM SUCESSO!\"
+              echo \"🌐 Aplicação disponível em: http://72.60.10.112\"
+              echo \"📊 Health check: http://72.60.10.112/api/health\"
+              echo \"🔧 Backend rodando na porta 3010\"
+              echo \"📁 Frontend servido pelo Nginx\"
+              echo \"\"
             else
               echo \"❌ Falha no health check\"
-              echo \"Logs do backend:\"
-              docker-compose logs backend --tail=10
-              echo \"Logs do nginx:\"
-              docker-compose logs nginx --tail=10
+              echo \"Logs do PM2:\"
+              pm2 logs metalgest-backend --lines 10
+              echo \"Status do Nginx:\"
+              systemctl status nginx
               exit 1
             fi
-            
-            echo \"\"
-            echo \"🎉 DEPLOY CONCLUÍDO COM SUCESSO!\"
-            echo \"🌐 Aplicação disponível em: http://72.60.10.112:3002\"
-            echo \"📊 Health check: http://72.60.10.112:3002/api/health\"
-            echo \"\"
           "
           
           echo "✅ Deploy finalizado com sucesso!"

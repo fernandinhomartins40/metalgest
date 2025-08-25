@@ -7,8 +7,29 @@
       "Bash(npm run build:*)",
       "Bash(npm run generate:*)",
       "Bash(npx prisma generate:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(docker-compose config:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(yamllint:*)",
+      "Bash(git commit:*)",
+      "Bash(touch:*)",
+      "Bash(npm install)",
+      "Bash(npm run migrate:*)",
+      "Bash(npm run seed:*)",
+      "Bash(npm start)",
+      "Bash(sed:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)",
+      "Bash(PORT=3001 npm start)",
+      "Bash(PORT=3002 npm start)",
+      "Bash(PORT=3003 npm start)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\c\\Projetos VScode\\metalgest"
+    ]
   }
 }

@@ -26,7 +26,7 @@ const API_BASE_URL = (() => {
   }
   
   // Priority 3: Development fallback
-  return 'http://localhost:3001/api';
+  return 'http://localhost:3000/api';
 })();
 
 // Token management
@@ -114,7 +114,7 @@ class HttpClient {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,11 +129,11 @@ class HttpClient {
       }
 
       TokenManager.setTokens(
-        result.data.tokens.accessToken,
-        result.data.tokens.refreshToken
+        result.data.token,
+        refreshToken
       );
 
-      return result.data.tokens;
+      return result.data.token;
     } catch (error) {
       TokenManager.clearTokens();
       // Redirect to login

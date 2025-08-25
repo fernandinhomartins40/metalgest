@@ -3,27 +3,37 @@
   "version": "0.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/web",
+    "backend"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "build:web": "turbo run build --filter=web",
-    "build:server": "turbo run build --filter=server",
-    "start:web": "turbo run start --filter=web",
-    "start:server": "turbo run start --filter=server",
-    "type-check": "turbo run type-check",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "db:generate": "turbo run db:generate",
-    "db:push": "turbo run db:push",
-    "db:migrate": "turbo run db:migrate",
-    "db:studio": "turbo run db:studio"
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd apps/web && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd apps/web && npm run build",
+    "build:backend": "cd backend && npm run migrate",
+    
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\"",
+    "start:frontend": "cd apps/web && npm run preview",
+    "start:backend": "cd backend && npm start",
+    
+    "lint": "cd apps/web && npm run lint",
+    "type-check": "cd apps/web && npm run type-check",
+    
+    "backend:migrate": "cd backend && npm run migrate",
+    "backend:seed": "cd backend && npm run seed",
+    "backend:test": "cd backend && npm test",
+    
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "devDependencies": {
     "@types/node": "^20.8.3",
-    "turbo": "^1.13.4",
+    "concurrently": "^8.2.2",
     "typescript": "^5.2.2"
   },
   "engines": {

@@ -1,11 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { trpc } from "../lib/trpc";
-import type { AuthUser } from "@metalgest/shared";
-import { useMe } from "../hooks/api/useAuth";
+import auth from "../services/auth";
+
+interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  active: boolean;
+}
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -21,23 +27,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { data: userData, isLoading: isUserLoading } = useMe();
-  const loginMutation = trpc.auth.login.useMutation();
-  const logoutMutation = trpc.auth.logout.useMutation();
-
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
-      const result = await loginMutation.mutateAsync({ email, password });
+      const result = await auth.login(email, password, rememberMe);
+      if (result.error) {
+        throw new Error(result.error);
+      }
       setUser(result.user);
-      return result;
     } catch (error) {
-      throw new Error("Login failed");
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await logoutMutation.mutateAsync();
+      await auth.logout();
       setUser(null);
       window.location.href = "/login";
     } catch (error) {
@@ -46,13 +50,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    if (userData) {
-      setUser(userData);
-    } else if (!isUserLoading) {
-      setUser(null);
-    }
-    setIsLoading(isUserLoading);
-  }, [userData, isUserLoading]);
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        const currentUser = await auth.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const value = {
     user,

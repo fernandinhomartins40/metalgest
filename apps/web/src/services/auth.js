@@ -41,10 +41,10 @@ export const auth = {
       });
 
       if (response.success) {
-        const { user, tokens } = response.data;
+        const { user, token, refreshToken } = response.data;
         
         // Store tokens
-        TokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
+        TokenManager.setTokens(token, refreshToken);
         
         // Store user data
         const userData = {
@@ -72,7 +72,8 @@ export const auth = {
         
         return {
           user: userData,
-          tokens,
+          token,
+          refreshToken,
           error: null,
         };
       }
@@ -82,7 +83,8 @@ export const auth = {
       console.error('Login error:', error);
       return {
         user: null,
-        tokens: null,
+        token: null,
+        refreshToken: null,
         error: error.message || 'Login failed',
       };
     }
@@ -98,10 +100,10 @@ export const auth = {
       });
 
       if (response.success) {
-        const { user, tokens } = response.data;
+        const { user, token, refreshToken } = response.data;
         
         // Store tokens
-        TokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
+        TokenManager.setTokens(token, refreshToken);
         
         // Store user data
         const userData = {
@@ -117,7 +119,8 @@ export const auth = {
         
         return {
           user: userData,
-          tokens,
+          token,
+          refreshToken,
           error: null,
         };
       }
@@ -127,7 +130,8 @@ export const auth = {
       console.error('Registration error:', error);
       return {
         user: null,
-        tokens: null,
+        token: null,
+        refreshToken: null,
         error: error.message || 'Registration failed',
       };
     }
@@ -173,14 +177,14 @@ export const auth = {
         try {
           const refreshToken = TokenManager.getRefreshToken();
           if (refreshToken) {
-            const response = await apiClient.post('/auth/refresh-token', {
+            const response = await apiClient.post('/auth/refresh', {
               refreshToken,
             });
             
             if (response.success) {
               TokenManager.setTokens(
-                response.data.tokens.accessToken,
-                response.data.tokens.refreshToken
+                response.data.token,
+                refreshToken
               );
             }
           }

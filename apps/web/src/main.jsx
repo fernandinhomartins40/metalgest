@@ -6,20 +6,17 @@ import App from "./App"
 import "./index.css"
 import { Toaster } from "./components/ui/toaster"
 import { ToastProvider } from "./components/ui/toast-provider"
-import { TRPCProvider } from "./providers/TRPCProvider"
 import { AuthProvider } from "./providers/AuthProvider"
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <TRPCProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <App />
-            <Toaster />
-          </ToastProvider>
-        </AuthProvider>
-      </TRPCProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <App />
+          <Toaster />
+        </ToastProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 )
