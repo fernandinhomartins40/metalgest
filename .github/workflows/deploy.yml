@@ -69,9 +69,20 @@ jobs:
           # 2. Copiar arquivos essenciais
           echo "📦 Copiando arquivos para VPS..."
           
-          echo "📦 Copiando docker-compose.yml..."
+          echo "📦 Copiando arquivos de configuração..."
           if ! scp_copy "docker-compose.yml" "$DEPLOY_PATH/"; then
             echo "❌ Erro ao copiar docker-compose.yml"
+            exit 1
+          fi
+          
+          echo "📦 Copiando Dockerfiles..."
+          if ! scp_copy "Dockerfile.frontend" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar Dockerfile.frontend"
+            exit 1
+          fi
+          
+          if ! scp_copy "Dockerfile.backend" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar Dockerfile.backend"
             exit 1
           fi
           
@@ -81,16 +92,25 @@ jobs:
             exit 1
           fi
           
-          echo "📦 Copiando frontend..."
-          if ! scp_copy "apps/web/dist/" "$DEPLOY_PATH/frontend/"; then
-            echo "❌ Erro ao copiar frontend"
+          echo "📦 Copiando código fonte..."
+          if ! scp_copy "apps/" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar apps"
             exit 1
           fi
           
-          echo "📦 Copiando backend..."
-          if ! scp_copy "backend/" "$DEPLOY_PATH/backend/"; then
+          if ! scp_copy "backend/" "$DEPLOY_PATH/"; then
             echo "❌ Erro ao copiar backend"
             exit 1
+          fi
+          
+          echo "📦 Copiando arquivos package..."
+          if ! scp_copy "package.json" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar package.json"
+            exit 1
+          fi
+          
+          if ! scp_copy "package-lock.json" "$DEPLOY_PATH/" 2>/dev/null || true; then
+            echo "⚠️  package-lock.json não encontrado (opcional)"
           fi
           
           echo "✅ Arquivos copiados com sucesso"
