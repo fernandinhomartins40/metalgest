@@ -1,10 +1,5 @@
 # Frontend Dockerfile for React + Vite
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
+FROM node:20-alpine AS builder
 
 # Configure npm for better network handling
 RUN npm config set registry https://registry.npmjs.org/ && \
@@ -12,23 +7,19 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 10000 && \
     npm config set fetch-retries 5
 
-# Copy package.json files
-COPY package*.json ./
-COPY apps/web/package*.json ./apps/web/
-
-# Install dependencies with retry
-RUN npm install --only=production || \
-    (sleep 10 && npm install --only=production) || \
-    (sleep 30 && npm install --only=production)
-
-# Rebuild the source code only when needed  
-FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+# Copy all source files
 COPY . .
 
-# Build the frontend application
-RUN npm run build:frontend
+# Install root dependencies
+RUN npm install || \
+    (sleep 10 && npm install) || \
+    (sleep 30 && npm install)
+
+# Install frontend dependencies and build
+WORKDIR /app/apps/web
+RUN npm install && npm run build
 
 # Production image with nginx
 FROM nginx:alpine AS runner
