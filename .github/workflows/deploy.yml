@@ -50,7 +50,7 @@ jobs:
           
           # Função para executar comandos SSH
           ssh_exec() {
-            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 "$VPS_USER@$VPS_HOST" "$1"
+            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=60 -o ServerAliveCountMax=10 "$VPS_USER@$VPS_HOST" "$1"
           }
           
           # Função para copiar arquivos
@@ -122,40 +122,42 @@ jobs:
             docker-compose --version
           "
           
-          # 4. Deploy com Docker
-          echo "⚙️ Fazendo deploy com Docker..."
-          ssh_exec "
-            cd $DEPLOY_PATH
-            
-            # Criar arquivos de ambiente
-            echo '📝 Criando arquivos de ambiente...'
-            cat > .env << EOF
+          # 4. Preparar ambiente
+          echo "📝 Criando arquivos de ambiente..."
+          ssh_exec "cd $DEPLOY_PATH && cat > .env << 'EOF'
           NODE_ENV=production
-          JWT_SECRET=metalgest-jwt-secret-production-\$(date +%s)
-          REFRESH_TOKEN_SECRET=metalgest-refresh-secret-production-\$(date +%s)
+          JWT_SECRET=metalgest-jwt-secret-production-$(date +%s)
+          REFRESH_TOKEN_SECRET=metalgest-refresh-secret-production-$(date +%s)
           FRONTEND_URL=http://72.60.10.112:3010
           VITE_API_URL=http://72.60.10.112:3010/api
-          EOF
-            
-            # Parar containers existentes
-            echo '🛑 Parando containers existentes...'
-            docker-compose down --remove-orphans 2>/dev/null || true
-            
-            # Fazer backup
-            echo '💾 Criando backup...'
+          EOF"
+          
+          # 5. Parar containers existentes
+          echo "🛑 Parando containers existentes..."
+          ssh_exec "cd $DEPLOY_PATH && docker-compose down --remove-orphans 2>/dev/null || true"
+          
+          # 6. Fazer backup
+          echo "💾 Criando backup..."
+          ssh_exec "
             TIMESTAMP=\$(date +\"%Y%m%d_%H%M%S\")
             mkdir -p /var/www/metalgest-backup
             if [ -d \"/var/www/metalgest-backup/deploy-current\" ]; then
               mv /var/www/metalgest-backup/deploy-current /var/www/metalgest-backup/deploy-\$TIMESTAMP
             fi
             cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-current
-            
-            # Build e iniciar containers
-            echo '🔧 Construindo e iniciando containers...'
-            docker-compose up -d --build
-            
-            # Aguardar containers
-            echo '⏳ Aguardando containers...'
+          "
+          
+          # 7. Build containers
+          echo "🔧 Construindo containers..."
+          ssh_exec "cd $DEPLOY_PATH && docker-compose build"
+          
+          # 8. Iniciar containers
+          echo "🚀 Iniciando containers..."
+          ssh_exec "cd $DEPLOY_PATH && docker-compose up -d"
+          
+          # 9. Aguardar containers
+          echo "⏳ Aguardando containers..."
+          ssh_exec "
             for i in {1..60}; do
               if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
                 echo \"✅ Aplicação pronta após \$i tentativas\"
@@ -164,31 +166,24 @@ jobs:
               echo \"Tentativa \$i/60...\"
               sleep 5
             done
-            
-            # Verificar containers
-            echo '📋 Verificando status dos containers...'
-            docker-compose ps
-            docker-compose logs --tail=20
-            
-            # Testes finais
-            echo '🧪 Testando aplicação...'
-            
+          "
+          
+          # 10. Verificar status
+          echo "📋 Verificando status dos containers..."
+          ssh_exec "cd $DEPLOY_PATH && docker-compose ps"
+          
+          # 11. Teste final
+          echo "🧪 Testando aplicação..."
+          ssh_exec "
             if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
               echo \"✅ Aplicação funcionando em http://72.60.10.112:3010\"
               echo \"✅ API health check: OK\"
-              echo \"\"
               echo \"🎉 DEPLOY CONCLUÍDO COM SUCESSO!\"
               echo \"🌐 Aplicação disponível em: http://72.60.10.112:3010\"
               echo \"📊 Health check: http://72.60.10.112:3010/api/health\"
-              echo \"🐳 Aplicação isolada em containers Docker\"
-              echo \"🔒 Usando apenas a porta 3010\"
-              echo \"\"
             else
               echo \"❌ Falha no health check\"
-              echo \"Logs dos containers:\"
-              docker-compose logs --tail=50
-              echo \"Status dos containers:\"
-              docker-compose ps
+              docker-compose logs --tail=20
               exit 1
             fi
           "
