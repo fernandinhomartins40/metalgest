@@ -21,16 +21,17 @@ jobs:
 
       - name: Install dependencies and build
         run: |
-          npm ci
-          
           # Build Frontend
-          echo "VITE_API_URL=http://72.60.10.112:3010/api" > apps/web/.env.production
-          npm run build:frontend
+          cd apps/web
+          echo "VITE_API_URL=http://72.60.10.112:3010/api" > .env.production
+          npm ci
+          npm run build
           
           # Verificar builds
           echo "✅ Frontend build:"
-          ls -la apps/web/dist/
+          ls -la dist/
           echo "✅ Backend files:"
+          cd ../../
           ls -la backend/
 
       - name: Install sshpass
@@ -49,24 +50,50 @@ jobs:
           
           # Função para executar comandos SSH
           ssh_exec() {
-            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$VPS_USER@$VPS_HOST" "$1"
+            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 "$VPS_USER@$VPS_HOST" "$1"
           }
           
           # Função para copiar arquivos
           scp_copy() {
-            sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r "$1" "$VPS_USER@$VPS_HOST:$2"
+            sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -r "$1" "$VPS_USER@$VPS_HOST:$2"
           }
           
           # 1. Preparar diretórios na VPS
           echo "📁 Preparando diretórios na VPS..."
-          ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true && mkdir -p frontend backend nginx"
+          if ! ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true && mkdir -p frontend backend nginx"; then
+            echo "❌ Erro ao preparar diretórios"
+            exit 1
+          fi
+          echo "✅ Diretórios preparados"
           
           # 2. Copiar arquivos essenciais
           echo "📦 Copiando arquivos para VPS..."
-          scp_copy "package.json" "$DEPLOY_PATH/"
-          scp_copy "nginx/" "$DEPLOY_PATH/"
-          scp_copy "apps/web/dist/" "$DEPLOY_PATH/frontend/"
-          scp_copy "backend/" "$DEPLOY_PATH/backend/"
+          
+          echo "📦 Copiando docker-compose.yml..."
+          if ! scp_copy "docker-compose.yml" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar docker-compose.yml"
+            exit 1
+          fi
+          
+          echo "📦 Copiando nginx..."
+          if ! scp_copy "nginx/" "$DEPLOY_PATH/"; then
+            echo "❌ Erro ao copiar nginx"
+            exit 1
+          fi
+          
+          echo "📦 Copiando frontend..."
+          if ! scp_copy "apps/web/dist/" "$DEPLOY_PATH/frontend/"; then
+            echo "❌ Erro ao copiar frontend"
+            exit 1
+          fi
+          
+          echo "📦 Copiando backend..."
+          if ! scp_copy "backend/" "$DEPLOY_PATH/backend/"; then
+            echo "❌ Erro ao copiar backend"
+            exit 1
+          fi
+          
+          echo "✅ Arquivos copiados com sucesso"
           
           # 3. Instalar Node.js na VPS (se necessário)
           echo "📦 Verificando Node.js na VPS..."
