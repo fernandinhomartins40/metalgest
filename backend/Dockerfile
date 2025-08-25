@@ -6,11 +6,21 @@ RUN apk --no-cache add curl
 # Set working directory
 WORKDIR /app
 
+# Configure npm for better network handling
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set timeout 300000 && \
+    npm config set maxsockets 1 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retries 5
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production
+# Install dependencies with retry
+RUN npm install --only=production || \
+    (sleep 10 && npm install --only=production) || \
+    (sleep 30 && npm install --only=production)
 
 # Copy source code
 COPY . .

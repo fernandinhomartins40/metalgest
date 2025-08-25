@@ -167,9 +167,11 @@ jobs:
             cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-current
           "
           
-          # 7. Build containers
+          # 7. Build containers sequencialmente
           echo "🔧 Construindo containers..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose build"
+          ssh_exec "cd $DEPLOY_PATH && docker-compose build --no-cache backend"
+          echo "🔧 Construindo frontend..."
+          ssh_exec "cd $DEPLOY_PATH && docker-compose build --no-cache frontend"
           
           # 8. Iniciar containers
           echo "🚀 Iniciando containers..."
