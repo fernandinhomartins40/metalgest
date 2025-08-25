@@ -184,11 +184,42 @@ jobs:
               listen 80;
               server_name 72.60.10.112;
               
+              # Security headers
+              add_header X-Frame-Options \"SAMEORIGIN\" always;
+              add_header X-Content-Type-Options \"nosniff\" always;
+              add_header X-XSS-Protection \"1; mode=block\" always;
+              add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
+              
+              # Client max body size
+              client_max_body_size 10M;
+              
               # Frontend estático
               location / {
                   root $DEPLOY_PATH/frontend;
                   index index.html;
                   try_files \$uri \$uri/ /index.html;
+                  
+                  # CORS headers for frontend
+                  add_header Access-Control-Allow-Origin \"*\" always;
+                  add_header Access-Control-Allow-Methods \"GET, POST, PUT, DELETE, OPTIONS\" always;
+                  add_header Access-Control-Allow-Headers \"Accept, Authorization, Content-Type, X-Requested-With\" always;
+              }
+              
+              # Favicon específico
+              location /favicon.ico {
+                  root $DEPLOY_PATH/frontend;
+                  expires 1y;
+                  add_header Cache-Control \"public, immutable\";
+                  access_log off;
+                  log_not_found off;
+              }
+              
+              # Static assets com cache
+              location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
+                  root $DEPLOY_PATH/frontend;
+                  expires 1y;
+                  add_header Cache-Control \"public, immutable\";
+                  access_log off;
               }
               
               # API Backend
@@ -202,9 +233,58 @@ jobs:
                   proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto \$scheme;
                   proxy_cache_bypass \$http_upgrade;
+                  
+                  # CORS para API
+                  add_header Access-Control-Allow-Origin \"http://72.60.10.112\" always;
+                  add_header Access-Control-Allow-Methods \"GET, POST, PUT, DELETE, OPTIONS, PATCH\" always;
+                  add_header Access-Control-Allow-Headers \"Accept, Authorization, Content-Type, X-Requested-With\" always;
+                  add_header Access-Control-Allow-Credentials true always;
+              }
+              
+              # Handle preflight requests
+              location /api/options {
+                  add_header Access-Control-Allow-Origin \"http://72.60.10.112\" always;
+                  add_header Access-Control-Allow-Methods \"GET, POST, PUT, DELETE, OPTIONS, PATCH\" always;
+                  add_header Access-Control-Allow-Headers \"Accept, Authorization, Content-Type, X-Requested-With\" always;
+                  add_header Access-Control-Allow-Credentials true always;
+                  add_header Content-Length 0;
+                  add_header Content-Type text/plain;
+                  return 204;
+              }
+              
+              # File uploads
+              location /uploads/ {
+                  proxy_pass http://localhost:3010;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
+              }
+              
+              # Block sensitive files
+              location ~ /\\. {
+                  deny all;
+                  access_log off;
+                  log_not_found off;
+              }
+              
+              location ~ \\.(env|log|git)\$ {
+                  deny all;
+                  access_log off;
+                  log_not_found off;
               }
           }
           NGINXEOF
+            
+            # Verificar arquivos copiados e definir permissões
+            echo '📁 Verificando arquivos e definindo permissões...'
+            ls -la $DEPLOY_PATH/
+            ls -la $DEPLOY_PATH/frontend/
+            
+            # Definir permissões corretas
+            chown -R www-data:www-data $DEPLOY_PATH/frontend/
+            chmod -R 755 $DEPLOY_PATH/frontend/
+            chmod -R 644 $DEPLOY_PATH/frontend/*
             
             # Ativar site
             ln -sf /etc/nginx/sites-available/metalgest /etc/nginx/sites-enabled/
