@@ -8,8 +8,6 @@ WORKDIR /app
 
 # Configure npm for better network handling
 RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set timeout 300000 && \
-    npm config set maxsockets 1 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retry-mintimeout 10000 && \
     npm config set fetch-retries 5
