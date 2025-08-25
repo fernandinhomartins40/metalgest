@@ -1,63 +1,37 @@
-# Backend Dockerfile for T3 Stack
-FROM node:18-alpine AS base
+FROM node:20-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Install curl for health checks
+RUN apk --no-cache add curl
+
+# Set working directory
 WORKDIR /app
 
-# Install turbo globally
-RUN npm install -g turbo
+# Configure npm for better network handling
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retries 5
 
-# Copy package.json files
-COPY package*.json ./
-COPY turbo.json ./
-COPY apps/server/package*.json ./apps/server/
-COPY packages/*/package*.json ./packages/*/
+# Copy backend package files
+COPY backend/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with retry
+RUN npm install --only=production || \
+    (sleep 10 && npm install --only=production) || \
+    (sleep 30 && npm install --only=production)
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Copy backend source code
+COPY backend/ ./
 
-# Generate Prisma client
-RUN npm run db:generate
+# Create data directory for SQLite
+RUN mkdir -p /app/data /app/uploads /app/logs
 
-# Build the application
-RUN npm run build:server
+# Expose port
+EXPOSE 3010
 
-# Production image
-FROM base AS runner
-WORKDIR /app
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3010/api/health || exit 1
 
-# Don't run production as root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/apps/server/.next ./apps/server/.next
-COPY --from=builder --chown=nextjs:nodejs /app/apps/server/public ./apps/server/public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/server/package*.json ./apps/server/
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
-
-# Copy Prisma files
-COPY --from=builder --chown=nextjs:nodejs /app/packages/database/prisma ./packages/database/prisma
-
-# Create uploads directory
-RUN mkdir -p ./apps/server/uploads
-RUN chown nextjs:nodejs ./apps/server/uploads
-
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT 3000
-ENV NODE_ENV production
-
-# Run database migrations and start the server
-CMD ["sh", "-c", "npm run db:push && npm run start:server"]
+# Start application
+CMD ["npm", "start"]
