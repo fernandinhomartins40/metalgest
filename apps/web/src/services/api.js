@@ -1,445 +1,340 @@
 /**
- * Mock API Service
- * Este é um serviço de API simulado que NÃO faz chamadas reais a nenhum backend.
- * Serve apenas para manter a estrutura do frontend intacta até a implementação do novo backend.
- *
- * IMPORTANTE: Todas as funções retornam dados simulados (mock).
+ * API Service
+ * Real implementation that communicates with the backend API
  */
 
-import { apiClient } from './httpClient';
-
-// Helper para simular delay de rede
-const mockDelay = () => new Promise(resolve => setTimeout(resolve, 300));
-
-// Helper para log de auditoria mock
-const mockAudit = (action, module, details = {}) => {
-  console.log(`[MOCK AUDIT] ${module}.${action}`, details);
-};
+import { httpClient } from './httpClient';
 
 export const api = {
   // ==================== DASHBOARD APIs ====================
   dashboard: {
     getStats: async () => {
-      await mockDelay();
-      mockAudit('get_stats', 'dashboard');
-      return {
-        totalClients: 0,
-        totalQuotes: 0,
-        totalRevenue: 0,
-        pendingOrders: 0
-      };
+      const response = await httpClient.get('/dashboard/stats');
+      return response.success ? response.data : null;
     },
 
-    getCharts: async () => {
-      await mockDelay();
-      mockAudit('get_charts', 'dashboard');
-      return {
-        revenue: [],
-        quotes: [],
-        orders: []
-      };
+    getRevenueChart: async (year) => {
+      const response = await httpClient.get('/dashboard/revenue-chart', { year });
+      return response.success ? response.data : null;
     },
 
-    getRecentQuotes: async (limit = 5) => {
-      await mockDelay();
-      mockAudit('get_recent_quotes', 'dashboard', { limit });
-      return [];
+    getQuotesConversion: async () => {
+      const response = await httpClient.get('/dashboard/quotes-conversion');
+      return response.success ? response.data : null;
     },
 
-    getPerformance: async () => {
-      await mockDelay();
-      mockAudit('get_performance', 'dashboard');
-      return {
-        quotesAccepted: 0,
-        quotesRejected: 0,
-        averageValue: 0
-      };
+    getTopClients: async (limit = 10) => {
+      const response = await httpClient.get('/dashboard/top-clients', { limit });
+      return response.success ? response.data : [];
     },
   },
 
   // ==================== PRODUCTS APIs ====================
   products: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'products', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (productData) => {
-      await mockDelay();
-      mockAudit('create', 'products', { productData });
-      return { id: Date.now().toString(), ...productData };
+      const response = await httpClient.get('/products', params);
+      return response.success ? response.data : { products: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'products', { id });
-      return null;
+      const response = await httpClient.get(`/products/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (productData) => {
+      const response = await httpClient.post('/products', productData);
+      return response;
     },
 
     update: async (id, productData) => {
-      await mockDelay();
-      mockAudit('update', 'products', { id, productData });
-      return { id, ...productData };
+      const response = await httpClient.put(`/products/${id}`, productData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'products', { id });
-      return true;
+      const response = await httpClient.delete(`/products/${id}`);
+      return response;
     },
 
-    search: async (params = {}) => {
-      await mockDelay();
-      mockAudit('search', 'products', { params });
-      return [];
+    updateStock: async (id, quantity, operation = 'set') => {
+      const response = await httpClient.patch(`/products/${id}/stock`, { quantity, operation });
+      return response;
+    },
+
+    getLowStock: async () => {
+      const response = await httpClient.get('/products/low-stock');
+      return response.success ? response.data : [];
+    },
+
+    getCategories: async () => {
+      const response = await httpClient.get('/products/categories');
+      return response.success ? response.data : [];
     },
   },
 
   // ==================== SERVICES APIs ====================
   services: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'services', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (serviceData) => {
-      await mockDelay();
-      mockAudit('create', 'services', { serviceData });
-      return { id: Date.now().toString(), ...serviceData };
+      const response = await httpClient.get('/services', params);
+      return response.success ? response.data : { services: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'services', { id });
-      return null;
+      const response = await httpClient.get(`/services/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (serviceData) => {
+      const response = await httpClient.post('/services', serviceData);
+      return response;
     },
 
     update: async (id, serviceData) => {
-      await mockDelay();
-      mockAudit('update', 'services', { id, serviceData });
-      return { id, ...serviceData };
+      const response = await httpClient.put(`/services/${id}`, serviceData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'services', { id });
-      return true;
+      const response = await httpClient.delete(`/services/${id}`);
+      return response;
     },
 
-    search: async (params = {}) => {
-      await mockDelay();
-      mockAudit('search', 'services', { params });
-      return [];
+    getCategories: async () => {
+      const response = await httpClient.get('/services/categories');
+      return response.success ? response.data : [];
     },
   },
 
   // ==================== CLIENTS APIs ====================
   clients: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'clients', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (clientData) => {
-      await mockDelay();
-      mockAudit('create', 'clients', { clientData });
-      return { id: Date.now().toString(), ...clientData };
+      const response = await httpClient.get('/clients', params);
+      return response.success ? response.data : { clients: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'clients', { id });
-      return null;
+      const response = await httpClient.get(`/clients/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (clientData) => {
+      const response = await httpClient.post('/clients', clientData);
+      return response;
     },
 
     update: async (id, clientData) => {
-      await mockDelay();
-      mockAudit('update', 'clients', { id, clientData });
-      return { id, ...clientData };
+      const response = await httpClient.put(`/clients/${id}`, clientData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'clients', { id });
-      return true;
+      const response = await httpClient.delete(`/clients/${id}`);
+      return response;
     },
 
-    search: async (params = {}) => {
-      await mockDelay();
-      mockAudit('search', 'clients', { params });
-      return [];
+    getStats: async (id) => {
+      const response = await httpClient.get(`/clients/${id}/stats`);
+      return response.success ? response.data : null;
     },
   },
 
   // ==================== QUOTES APIs ====================
   quotes: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'quotes', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (quoteData) => {
-      await mockDelay();
-      mockAudit('create', 'quotes', { quoteData });
-      return { id: Date.now().toString(), ...quoteData };
+      const response = await httpClient.get('/quotes', params);
+      return response.success ? response.data : { quotes: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'quotes', { id });
-      return null;
+      const response = await httpClient.get(`/quotes/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    getByPublicToken: async (token) => {
+      const response = await httpClient.get(`/quotes/public/${token}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (quoteData) => {
+      const response = await httpClient.post('/quotes', quoteData);
+      return response;
     },
 
     update: async (id, quoteData) => {
-      await mockDelay();
-      mockAudit('update', 'quotes', { id, quoteData });
-      return { id, ...quoteData };
+      const response = await httpClient.put(`/quotes/${id}`, quoteData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'quotes', { id });
-      return true;
+      const response = await httpClient.delete(`/quotes/${id}`);
+      return response;
+    },
+
+    updateStatus: async (id, status) => {
+      const response = await httpClient.patch(`/quotes/${id}/status`, { status });
+      return response;
+    },
+
+    togglePublicLink: async (id, enabled) => {
+      const response = await httpClient.patch(`/quotes/${id}/public-link`, { enabled });
+      return response;
     },
 
     duplicate: async (id) => {
-      await mockDelay();
-      mockAudit('duplicate', 'quotes', { id });
-      return { id: Date.now().toString(), originalId: id };
-    },
-
-    generatePublicLink: async (id) => {
-      await mockDelay();
-      mockAudit('generate_public_link', 'quotes', { id });
-      return {
-        publicToken: 'mock-token-' + Date.now(),
-        publicUrl: window.location.origin + '/quote/mock-token-' + Date.now(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      };
-    },
-
-    getPublicQuote: async (token) => {
-      await mockDelay();
-      return null;
-    },
-
-    updatePublicQuoteResponse: async (token, responseData) => {
-      await mockDelay();
-      return { success: true };
-    },
-
-    generatePDF: async (id) => {
-      await mockDelay();
-      mockAudit('generate_pdf', 'quotes', { id });
-      return {
-        url: '#',
-        filename: `quote-${id}.pdf`
-      };
+      const response = await httpClient.post(`/quotes/${id}/duplicate`);
+      return response;
     },
   },
 
   // ==================== SERVICE ORDERS APIs ====================
   serviceOrders: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'service_orders', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (serviceOrderData) => {
-      await mockDelay();
-      mockAudit('create', 'service_orders', { serviceOrderData });
-      return { id: Date.now().toString(), ...serviceOrderData };
+      const response = await httpClient.get('/service-orders', params);
+      return response.success ? response.data : { orders: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'service_orders', { id });
-      return null;
+      const response = await httpClient.get(`/service-orders/${id}`);
+      return response.success ? response.data : null;
     },
 
-    update: async (id, serviceOrderData) => {
-      await mockDelay();
-      mockAudit('update', 'service_orders', { id, serviceOrderData });
-      return { id, ...serviceOrderData };
+    create: async (orderData) => {
+      const response = await httpClient.post('/service-orders', orderData);
+      return response;
+    },
+
+    update: async (id, orderData) => {
+      const response = await httpClient.put(`/service-orders/${id}`, orderData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'service_orders', { id });
-      return true;
+      const response = await httpClient.delete(`/service-orders/${id}`);
+      return response;
     },
 
     updateStatus: async (id, status) => {
-      await mockDelay();
-      mockAudit('update_status', 'service_orders', { id, status });
-      return { id, status };
-    },
-
-    createFromQuote: async (quoteId, serviceOrderData) => {
-      await mockDelay();
-      mockAudit('create_from_quote', 'service_orders', { quoteId, serviceOrderData });
-      return { id: Date.now().toString(), quoteId, ...serviceOrderData };
+      const response = await httpClient.patch(`/service-orders/${id}/status`, { status });
+      return response;
     },
   },
 
   // ==================== TRANSACTIONS APIs ====================
   transactions: {
     list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'transactions', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (transactionData) => {
-      await mockDelay();
-      mockAudit('create', 'transactions', { transactionData });
-      return { id: Date.now().toString(), ...transactionData };
+      const response = await httpClient.get('/transactions', params);
+      return response.success ? response.data : { transactions: [], pagination: {} };
     },
 
     get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'transactions', { id });
-      return null;
+      const response = await httpClient.get(`/transactions/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (transactionData) => {
+      const response = await httpClient.post('/transactions', transactionData);
+      return response;
     },
 
     update: async (id, transactionData) => {
-      await mockDelay();
-      mockAudit('update', 'transactions', { id, transactionData });
-      return { id, ...transactionData };
+      const response = await httpClient.put(`/transactions/${id}`, transactionData);
+      return response;
     },
 
     delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'transactions', { id });
-      return true;
-    },
-
-    getSummary: async (params = {}) => {
-      await mockDelay();
-      mockAudit('get_summary', 'transactions', { params });
-      return {
-        totalIncome: 0,
-        totalExpense: 0,
-        balance: 0
-      };
+      const response = await httpClient.delete(`/transactions/${id}`);
+      return response;
     },
 
     getBalance: async (params = {}) => {
-      await mockDelay();
-      mockAudit('get_balance', 'transactions', { params });
-      return { balance: 0 };
+      const response = await httpClient.get('/transactions/balance', params);
+      return response.success ? response.data : null;
+    },
+
+    getSummaryByCategory: async (params = {}) => {
+      const response = await httpClient.get('/transactions/summary/category', params);
+      return response.success ? response.data : [];
+    },
+
+    getSummaryByMonth: async (year) => {
+      const response = await httpClient.get('/transactions/summary/month', { year });
+      return response.success ? response.data : [];
+    },
+  },
+
+  // ==================== USERS APIs ====================
+  users: {
+    list: async (params = {}) => {
+      const response = await httpClient.get('/users', params);
+      return response.success ? response.data : { users: [], pagination: {} };
+    },
+
+    get: async (id) => {
+      const response = await httpClient.get(`/users/${id}`);
+      return response.success ? response.data : null;
+    },
+
+    create: async (userData) => {
+      const response = await httpClient.post('/users', userData);
+      return response;
+    },
+
+    update: async (id, userData) => {
+      const response = await httpClient.put(`/users/${id}`, userData);
+      return response;
+    },
+
+    delete: async (id) => {
+      const response = await httpClient.delete(`/users/${id}`);
+      return response;
+    },
+
+    resetPassword: async (id, newPassword) => {
+      const response = await httpClient.post(`/users/${id}/reset-password`, { newPassword });
+      return response;
+    },
+
+    getStats: async (id) => {
+      const response = await httpClient.get(`/users/${id}/stats`);
+      return response.success ? response.data : null;
     },
   },
 
   // ==================== SETTINGS APIs ====================
   settings: {
+    list: async () => {
+      const response = await httpClient.get('/settings');
+      return response.success ? response.data : {};
+    },
+
+    get: async (key) => {
+      const response = await httpClient.get(`/settings/${key}`);
+      return response.success ? response.data : null;
+    },
+
+    upsert: async (key, value) => {
+      const response = await httpClient.put(`/settings/${key}`, { value });
+      return response;
+    },
+
+    updateBulk: async (settings) => {
+      const response = await httpClient.post('/settings/bulk', settings);
+      return response;
+    },
+
+    delete: async (key) => {
+      const response = await httpClient.delete(`/settings/${key}`);
+      return response;
+    },
+
     getCompany: async () => {
-      await mockDelay();
-      mockAudit('get_company_settings', 'settings');
-      return {
-        name: '',
-        email: '',
-        phone: '',
-        address: ''
-      };
+      const response = await httpClient.get('/settings/company');
+      return response.success ? response.data : {};
     },
 
-    updateCompany: async (settingsData) => {
-      await mockDelay();
-      mockAudit('update_company_settings', 'settings', { settingsData });
-      return settingsData;
-    },
-
-    getSystem: async () => {
-      await mockDelay();
-      mockAudit('get_system_settings', 'settings');
-      return {
-        timezone: 'America/Sao_Paulo',
-        language: 'pt-BR',
-        currency: 'BRL'
-      };
-    },
-
-    updateSystem: async (settingsData) => {
-      await mockDelay();
-      mockAudit('update_system_settings', 'settings', { settingsData });
-      return settingsData;
-    },
-
-    getNotifications: async () => {
-      await mockDelay();
-      mockAudit('get_notification_settings', 'settings');
-      return {
-        emailNotifications: true,
-        pushNotifications: false
-      };
-    },
-
-    updateNotifications: async (settingsData) => {
-      await mockDelay();
-      mockAudit('update_notification_settings', 'settings', { settingsData });
-      return settingsData;
-    },
-  },
-
-  // ==================== USERS APIs (Admin only) ====================
-  users: {
-    list: async (params = {}) => {
-      await mockDelay();
-      mockAudit('list', 'users', { params });
-      return { data: [], total: 0, page: 1, limit: 10 };
-    },
-
-    create: async (userData) => {
-      await mockDelay();
-      mockAudit('create', 'users', { userData });
-      return { id: Date.now().toString(), ...userData };
-    },
-
-    get: async (id) => {
-      await mockDelay();
-      mockAudit('get', 'users', { id });
-      return null;
-    },
-
-    update: async (id, userData) => {
-      await mockDelay();
-      mockAudit('update', 'users', { id, userData });
-      return { id, ...userData };
-    },
-
-    delete: async (id) => {
-      await mockDelay();
-      mockAudit('delete', 'users', { id });
-      return true;
-    },
-  },
-
-  // ==================== FILE UPLOAD ====================
-  upload: {
-    logo: async (file, onProgress) => {
-      await mockDelay();
-      mockAudit('upload_logo', 'upload', { fileName: file.name });
-      if (onProgress) onProgress(100);
-      return {
-        url: URL.createObjectURL(file),
-        filename: file.name
-      };
-    },
-
-    document: async (file, onProgress) => {
-      await mockDelay();
-      mockAudit('upload_document', 'upload', { fileName: file.name });
-      if (onProgress) onProgress(100);
-      return {
-        url: URL.createObjectURL(file),
-        filename: file.name
-      };
+    updateCompany: async (companyData) => {
+      const response = await httpClient.put('/settings/company', companyData);
+      return response;
     },
   },
 };

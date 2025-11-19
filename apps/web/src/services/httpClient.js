@@ -1,10 +1,11 @@
 /**
- * Mock HTTP Client
- * Este é um cliente HTTP simulado que NÃO faz chamadas reais a nenhum backend.
- * Serve apenas para manter a estrutura do frontend intacta até a implementação do novo backend.
+ * HTTP Client for MetalGest API
+ * Real implementation with token management and automatic refresh
  */
 
-// Token management (apenas local storage, sem validação real)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3010/api';
+
+// Token management
 const TokenManager = {
   getAccessToken: () => localStorage.getItem('metalgest_access_token'),
 
@@ -21,97 +22,254 @@ const TokenManager = {
     localStorage.removeItem('metalgest_user');
   },
 
-  isTokenExpired: () => {
-    // Mock: nunca expira
-    return false;
+  isTokenExpired: (token) => {
+    if (!token) return true;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
   }
 };
 
-// Mock HTTP Client class
+// HTTP Client class
 class HttpClient {
   constructor() {
-    console.warn('[MOCK MODE] HttpClient está operando em modo simulado. Nenhuma chamada real de API será feita.');
+    this.baseURL = API_URL;
+    this.isRefreshing = false;
+    this.refreshSubscribers = [];
   }
 
-  // Simula uma resposta de sucesso
-  mockSuccess(data = null) {
-    return Promise.resolve({
-      success: true,
-      data: data,
-      error: null
-    });
+  onRefreshed(token) {
+    this.refreshSubscribers.forEach((callback) => callback(token));
+    this.refreshSubscribers = [];
   }
 
-  // Simula uma resposta de erro
-  mockError(message = 'Operação não disponível') {
-    return Promise.resolve({
-      success: false,
-      data: null,
-      error: {
-        message: message,
-        code: 'MOCK_ERROR'
+  addRefreshSubscriber(callback) {
+    this.refreshSubscribers.push(callback);
+  }
+
+  async refreshAccessToken() {
+    const refreshToken = TokenManager.getRefreshToken();
+    if (!refreshToken) {
+      TokenManager.clearTokens();
+      window.location.href = '/login';
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
       }
-    });
+
+      const data = await response.json();
+      TokenManager.setTokens(data.accessToken, data.refreshToken);
+      return data.accessToken;
+    } catch (error) {
+      TokenManager.clearTokens();
+      window.location.href = '/login';
+      throw error;
+    }
   }
 
-  // HTTP Methods (todos retornam mock)
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    let accessToken = TokenManager.getAccessToken();
+
+    // Check if token is expired and refresh if needed
+    if (accessToken && TokenManager.isTokenExpired(accessToken)) {
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        try {
+          accessToken = await this.refreshAccessToken();
+          this.isRefreshing = false;
+          this.onRefreshed(accessToken);
+        } catch (error) {
+          this.isRefreshing = false;
+          throw error;
+        }
+      } else {
+        // Wait for token refresh
+        accessToken = await new Promise((resolve) => {
+          this.addRefreshSubscriber((token) => {
+            resolve(token);
+          });
+        });
+      }
+    }
+
+    // Build headers
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    // Make request
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        // Try to refresh token once
+        if (!this.isRefreshing) {
+          this.isRefreshing = true;
+          try {
+            const newToken = await this.refreshAccessToken();
+            this.isRefreshing = false;
+            this.onRefreshed(newToken);
+
+            // Retry original request with new token
+            headers['Authorization'] = `Bearer ${newToken}`;
+            const retryResponse = await fetch(url, {
+              ...options,
+              headers,
+            });
+
+            if (!retryResponse.ok) {
+              const errorData = await retryResponse.json().catch(() => ({ error: { message: 'Request failed' } }));
+              return {
+                success: false,
+                data: null,
+                error: errorData.error || { message: 'Request failed' },
+              };
+            }
+
+            const data = await retryResponse.json();
+            return {
+              success: true,
+              data,
+              error: null,
+            };
+          } catch (error) {
+            this.isRefreshing = false;
+            TokenManager.clearTokens();
+            window.location.href = '/login';
+            throw error;
+          }
+        }
+      }
+
+      // Handle other error responses
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: 'Request failed' } }));
+        return {
+          success: false,
+          data: null,
+          error: errorData.error || { message: 'Request failed' },
+        };
+      }
+
+      // Success response
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        error: null,
+      };
+    } catch (error) {
+      console.error('HTTP request error:', error);
+      return {
+        success: false,
+        data: null,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error.message || 'Network error occurred',
+        },
+      };
+    }
+  }
+
   async get(endpoint, params = {}) {
-    console.log('[MOCK GET]', endpoint, params);
-    return this.mockSuccess([]);
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    return this.request(url, { method: 'GET' });
   }
 
   async post(endpoint, data = {}) {
-    console.log('[MOCK POST]', endpoint, data);
-    return this.mockSuccess({ id: Date.now().toString(), ...data });
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async put(endpoint, data = {}) {
-    console.log('[MOCK PUT]', endpoint, data);
-    return this.mockSuccess({ id: Date.now().toString(), ...data });
-  }
-
-  async delete(endpoint) {
-    console.log('[MOCK DELETE]', endpoint);
-    return this.mockSuccess(true);
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 
   async patch(endpoint, data = {}) {
-    console.log('[MOCK PATCH]', endpoint, data);
-    return this.mockSuccess({ id: Date.now().toString(), ...data });
+    return this.request(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 
-  // File upload (mock)
-  async upload(endpoint, file, onProgress = null) {
-    console.log('[MOCK UPLOAD]', endpoint, file.name);
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
+  }
 
-    // Simula progresso
-    if (onProgress) {
-      setTimeout(() => onProgress(50), 100);
-      setTimeout(() => onProgress(100), 200);
+  async upload(endpoint, formData) {
+    let accessToken = TokenManager.getAccessToken();
+
+    const headers = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    return this.mockSuccess({
-      url: URL.createObjectURL(file),
-      filename: file.name,
-      size: file.size
-    });
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: 'Upload failed' } }));
+        return {
+          success: false,
+          data: null,
+          error: errorData.error || { message: 'Upload failed' },
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        error: {
+          code: 'UPLOAD_ERROR',
+          message: error.message || 'Upload error occurred',
+        },
+      };
+    }
   }
 }
 
-// Create HTTP client instance
-const httpClient = new HttpClient();
-
-// Export API client
-export const apiClient = {
-  get: async (endpoint, params) => httpClient.get(endpoint, params),
-  post: async (endpoint, data) => httpClient.post(endpoint, data),
-  put: async (endpoint, data) => httpClient.put(endpoint, data),
-  delete: async (endpoint) => httpClient.delete(endpoint),
-  patch: async (endpoint, data) => httpClient.patch(endpoint, data),
-  upload: async (endpoint, file, onProgress) => httpClient.upload(endpoint, file, onProgress)
-};
-
-// Export token manager
+// Export singleton instance
+export const httpClient = new HttpClient();
 export { TokenManager };
-
-export default apiClient;
+export default httpClient;

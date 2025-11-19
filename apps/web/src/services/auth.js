@@ -1,10 +1,9 @@
 /**
- * Mock Authentication Service
- * Este é um serviço de autenticação simulado que NÃO faz chamadas reais a nenhum backend.
- * Serve apenas para manter a estrutura do frontend intacta até a implementação do novo backend.
+ * Authentication Service
+ * Real implementation that communicates with the backend API
  */
 
-import { TokenManager } from './httpClient';
+import { httpClient, TokenManager } from './httpClient';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -13,32 +12,6 @@ const STORAGE_KEYS = {
   REFRESH_TOKEN: 'metalgest_refresh_token',
   CREDENTIALS: 'metalgest_credentials',
   PREFERENCES: 'metalgest_preferences',
-};
-
-// Mock user data
-const createMockUser = (email, name = 'Usuário Demo') => ({
-  id: Date.now().toString(),
-  email,
-  name,
-  role: 'admin',
-  active: true,
-  emailVerified: true,
-  plan: 'premium',
-  subscription_status: 'active',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-});
-
-// Mock token
-const createMockToken = () => {
-  const payload = {
-    sub: Date.now().toString(),
-    exp: Date.now() / 1000 + 86400, // 24h from now
-    iat: Date.now() / 1000
-  };
-  return btoa(JSON.stringify({ header: 'mock' })) + '.' +
-         btoa(JSON.stringify(payload)) + '.' +
-         btoa('signature');
 };
 
 // Encryption helper for remember me
@@ -60,208 +33,312 @@ const decryptData = (encryptedData) => {
   }
 };
 
-export const auth = {
-  // Login user (MOCK)
-  login: async (email, password, rememberMe = false, keepConnected = false) => {
-    console.log('[MOCK LOGIN]', email);
-
-    // Simula delay de rede
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Cria usuário mock
-    const user = createMockUser(email);
-    const token = createMockToken();
-    const refreshToken = createMockToken();
-
-    // Store tokens
-    TokenManager.setTokens(token, refreshToken);
-
-    // Store user data
-    const userData = {
-      ...user,
-      rememberMe,
-      keepConnected,
-    };
-
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-
-    // Store credentials if rememberMe is true
-    if (rememberMe) {
-      const encryptedCredentials = encryptData({ email, password });
-      if (encryptedCredentials) {
-        localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
-      }
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
-    }
-
-    return {
-      user: userData,
-      token,
-      refreshToken,
-      error: null,
-    };
-  },
-
-  // Register user (MOCK)
-  register: async (name, email, password) => {
-    console.log('[MOCK REGISTER]', name, email);
-
-    // Simula delay de rede
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Cria usuário mock
-    const user = createMockUser(email, name);
-    const token = createMockToken();
-    const refreshToken = createMockToken();
-
-    // Store tokens
-    TokenManager.setTokens(token, refreshToken);
-
-    // Store user data
+// Save user to storage
+const saveUser = (user) => {
+  try {
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-
-    return {
-      user,
-      token,
-      refreshToken,
-      error: null,
-    };
-  },
-
-  // Logout user (MOCK)
-  logout: async () => {
-    console.log('[MOCK LOGOUT]');
-
-    // Clear all local storage except remembered credentials
-    const credentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-
-    TokenManager.clearTokens();
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
-
-    // Keep remembered credentials if they exist
-    if (credentials) {
-      localStorage.setItem(STORAGE_KEYS.CREDENTIALS, credentials);
-    }
-  },
-
-  // Get current user (MOCK)
-  getCurrentUser: async () => {
-    console.log('[MOCK GET CURRENT USER]');
-
-    const token = TokenManager.getAccessToken();
-
-    if (!token) {
-      return null;
-    }
-
-    // Get user data from local storage
-    const userData = localStorage.getItem(STORAGE_KEYS.USER);
-    return userData ? JSON.parse(userData) : null;
-  },
-
-  // Reset password (MOCK)
-  resetPassword: async (email) => {
-    console.log('[MOCK RESET PASSWORD]', email);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, error: null };
-  },
-
-  // Update password (MOCK)
-  updatePassword: async (token, newPassword) => {
-    console.log('[MOCK UPDATE PASSWORD]');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, error: null };
-  },
-
-  // Change password (MOCK)
-  changePassword: async (currentPassword, newPassword) => {
-    console.log('[MOCK CHANGE PASSWORD]');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, error: null };
-  },
-
-  // Update profile (MOCK)
-  updateProfile: async (updateData) => {
-    console.log('[MOCK UPDATE PROFILE]', updateData);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Get current user
-    const currentUser = auth.getStoredUser();
-    if (!currentUser) {
-      return { user: null, error: 'No user logged in' };
-    }
-
-    // Update user data
-    const userData = {
-      ...currentUser,
-      ...updateData,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Save updated user
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-
-    return { user: userData, error: null };
-  },
-
-  // Get saved credentials
-  getSavedCredentials: () => {
-    try {
-      const encryptedCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-
-      if (encryptedCredentials) {
-        return decryptData(encryptedCredentials);
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Get saved credentials error:', error);
-      return null;
-    }
-  },
-
-  // Check if user is authenticated
-  isAuthenticated: () => {
-    const token = TokenManager.getAccessToken();
-    return !!token;
-  },
-
-  // Get stored user data
-  getStoredUser: () => {
-    try {
-      const userData = localStorage.getItem(STORAGE_KEYS.USER);
-      return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-      console.error('Get stored user error:', error);
-      return null;
-    }
-  },
-
-  // Password validation
-  validatePassword: (password) => {
-    const hasMinLength = password.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const strength = [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSymbol]
-      .filter(Boolean).length;
-
-    return {
-      isValid: hasMinLength && hasUpperCase && hasNumber && hasSymbol,
-      strength: strength / 5,
-      requirements: {
-        hasMinLength,
-        hasUpperCase,
-        hasLowerCase,
-        hasNumber,
-        hasSymbol,
-      },
-    };
-  },
+  } catch (error) {
+    console.error('Error saving user:', error);
+  }
 };
 
-export default auth;
+// Get current user from storage
+const getCurrentUser = () => {
+  try {
+    const userStr = localStorage.getItem(STORAGE_KEYS.USER);
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return null;
+  }
+};
+
+// Save credentials for remember me
+const saveCredentials = (email, password) => {
+  const encrypted = encryptData({ email, password });
+  if (encrypted) {
+    localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encrypted);
+  }
+};
+
+// Get saved credentials
+const getSavedCredentials = () => {
+  const encrypted = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+  return encrypted ? decryptData(encrypted) : null;
+};
+
+// Clear saved credentials
+const clearCredentials = () => {
+  localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
+};
+
+// Authentication Service
+export const AuthService = {
+  /**
+   * Login with email and password
+   */
+  async login(email, password, rememberMe = false) {
+    try {
+      const response = await httpClient.post('/auth/login', {
+        email,
+        password,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Login failed',
+        };
+      }
+
+      // Save tokens
+      TokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
+
+      // Save user
+      saveUser(response.data.user);
+
+      // Handle remember me
+      if (rememberMe) {
+        saveCredentials(email, password);
+      } else {
+        clearCredentials();
+      }
+
+      return {
+        success: true,
+        user: response.data.user,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Login failed',
+      };
+    }
+  },
+
+  /**
+   * Register new user
+   */
+  async register(name, email, password) {
+    try {
+      const response = await httpClient.post('/auth/register', {
+        name,
+        email,
+        password,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Registration failed',
+        };
+      }
+
+      // Save tokens
+      TokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
+
+      // Save user
+      saveUser(response.data.user);
+
+      return {
+        success: true,
+        user: response.data.user,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Registration failed',
+      };
+    }
+  },
+
+  /**
+   * Logout
+   */
+  async logout() {
+    try {
+      // Call logout endpoint to invalidate refresh token
+      await httpClient.post('/auth/logout');
+
+      // Clear local storage
+      TokenManager.clearTokens();
+      clearCredentials();
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      // Even if API call fails, clear local data
+      TokenManager.clearTokens();
+      clearCredentials();
+
+      return {
+        success: true,
+      };
+    }
+  },
+
+  /**
+   * Get current user from API
+   */
+  async getCurrentUser() {
+    try {
+      const response = await httpClient.get('/auth/me');
+
+      if (!response.success) {
+        return {
+          success: false,
+          user: null,
+        };
+      }
+
+      // Update stored user
+      saveUser(response.data);
+
+      return {
+        success: true,
+        user: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        user: null,
+      };
+    }
+  },
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(userData) {
+    try {
+      const response = await httpClient.put('/auth/profile', userData);
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Profile update failed',
+        };
+      }
+
+      // Update stored user
+      saveUser(response.data);
+
+      return {
+        success: true,
+        user: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Profile update failed',
+      };
+    }
+  },
+
+  /**
+   * Change password
+   */
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await httpClient.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password change failed',
+        };
+      }
+
+      return {
+        success: true,
+        message: response.data.message || 'Password changed successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Password change failed',
+      };
+    }
+  },
+
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(email) {
+    try {
+      const response = await httpClient.post('/auth/forgot-password', {
+        email,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password reset request failed',
+        };
+      }
+
+      return {
+        success: true,
+        message: response.data.message || 'Password reset email sent',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Password reset request failed',
+      };
+    }
+  },
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(token, newPassword) {
+    try {
+      const response = await httpClient.post('/auth/reset-password', {
+        token,
+        newPassword,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password reset failed',
+        };
+      }
+
+      return {
+        success: true,
+        message: response.data.message || 'Password reset successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Password reset failed',
+      };
+    }
+  },
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    const accessToken = TokenManager.getAccessToken();
+    return !!accessToken && !TokenManager.isTokenExpired(accessToken);
+  },
+
+  /**
+   * Get saved credentials
+   */
+  getSavedCredentials,
+
+  /**
+   * Get current user from storage (without API call)
+   */
+  getCurrentUserFromStorage: getCurrentUser,
+};
+
+export default AuthService;
