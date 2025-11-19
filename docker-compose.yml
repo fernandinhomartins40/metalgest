@@ -1,61 +1,90 @@
+# Docker Compose - MetalGest Full Stack
+# Frontend + Backend + PostgreSQL + Nginx
+
 services:
-  # Backend Node.js + SQLite3 (isolado)
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: metalgest
+      POSTGRES_PASSWORD: metalgest123
+      POSTGRES_DB: metalgest
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - metalgest-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metalgest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Node.js + Prisma)
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: docker/backend/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3010
-      DATABASE_PATH: /app/data/sqlite.db
-      JWT_SECRET: ${JWT_SECRET:-metalgest-jwt-secret-production}
-      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-metalgest-refresh-secret-production}
-      FRONTEND_URL: ${FRONTEND_URL:-http://72.60.10.112:3010}
+      HOST: 0.0.0.0
+      DATABASE_URL: "postgresql://metalgest:metalgest123@postgres:5432/metalgest?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-change-this-super-secret-jwt-key-in-production}
+      JWT_EXPIRES_IN: "24h"
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-this-refresh-secret-key}
+      REFRESH_TOKEN_EXPIRES_IN: "7d"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3010}
     expose:
       - "3010"
     volumes:
-      - ./backend/data:/app/data
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3010/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - ./apps/api/uploads:/app/uploads
+      - ./apps/api/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - metalgest-network
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
   # Frontend React/Vite
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: docker/frontend/Dockerfile
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://72.60.10.112:3010/api}
+      VITE_APP_NAME: MetalGest
+      VITE_APP_VERSION: "2.0.0"
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3010/api}
     expose:
       - "3000"
-    depends_on:
-      - backend
     networks:
       - metalgest-network
 
-  # Nginx Proxy - Única porta exposta
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     restart: unless-stopped
     ports:
       - "3010:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./certs:/etc/nginx/certs
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - frontend
       - backend
     networks:
       - metalgest-network
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   metalgest-network:

@@ -1,0 +1,587 @@
+// Schema Prisma - MetalGest Backend
+// Database: PostgreSQL 15+
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  USER
+  MANAGER
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+}
+
+enum ClientType {
+  INDIVIDUAL // Pessoa Física
+  BUSINESS   // Pessoa Jurídica
+}
+
+enum ClientCategory {
+  POTENTIAL // Cliente em potencial
+  REGULAR   // Cliente regular
+  VIP       // Cliente VIP
+}
+
+enum QuoteStatus {
+  DRAFT     // Rascunho
+  PENDING   // Aguardando resposta
+  APPROVED  // Aprovado
+  REJECTED  // Rejeitado
+  EXPIRED   // Expirado
+}
+
+enum ServiceOrderStatus {
+  WAITING      // Aguardando início
+  IN_PROGRESS  // Em andamento
+  PAUSED       // Pausado
+  FINISHED     // Finalizado
+  DELIVERED    // Entregue
+  CANCELLED    // Cancelado
+}
+
+enum ServiceOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TransactionType {
+  INCOME   // Receita
+  EXPENSE  // Despesa
+}
+
+enum TransactionStatus {
+  PENDING   // Pendente
+  PAID      // Pago
+  CANCELLED // Cancelado
+  OVERDUE   // Vencido
+}
+
+enum PaymentMethod {
+  CASH           // Dinheiro
+  CREDIT_CARD    // Cartão de crédito
+  DEBIT_CARD     // Cartão de débito
+  BANK_TRANSFER  // Transferência bancária
+  PIX            // PIX
+  BOLETO         // Boleto
+  CHECK          // Cheque
+  OTHER          // Outro
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String // bcrypt hash
+  role      UserRole @default(USER)
+  active    Boolean  @default(true)
+
+  // Email verification
+  emailVerified Boolean @default(false)
+  verificationToken String?
+
+  // Subscription
+  plan              PlanType           @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionId    String?  // ID do MercadoPago/ASAAS
+  subscriptionExpiry DateTime?
+
+  // Profile
+  phone     String?
+  avatar    String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  refreshTokens    RefreshToken[]
+  clients          Client[]
+  products         Product[]
+  services         Service[]
+  quotes           Quote[]
+  serviceOrders    ServiceOrder[]
+  transactions     Transaction[]
+  companySettings  CompanySettings?
+  systemSettings   SystemSettings?
+  notificationSettings NotificationSettings?
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Client {
+  id String @id @default(uuid())
+
+  // Type
+  type ClientType @default(INDIVIDUAL)
+
+  // Basic Info
+  name     String
+  email    String?
+  phone    String?
+  mobile   String?
+
+  // Documents
+  document          String? // CPF ou CNPJ
+  stateRegistration String? // Inscrição Estadual
+  cityRegistration  String? // Inscrição Municipal
+
+  // Address
+  zipCode    String?
+  street     String?
+  number     String?
+  complement String?
+  neighborhood String?
+  city       String?
+  state      String?
+  country    String? @default("Brasil")
+
+  // Business Info
+  category ClientCategory @default(POTENTIAL)
+  notes    String?
+
+  // Status
+  active Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  quotes Quote[]
+
+  @@index([userId])
+  @@index([document])
+  @@index([email])
+  @@map("clients")
+}
+
+model Product {
+  id String @id @default(uuid())
+
+  // Basic Info
+  name        String
+  description String?
+
+  // Pricing
+  price    Decimal @db.Decimal(10, 2)
+  cost     Decimal? @db.Decimal(10, 2) // Custo
+
+  // Category
+  category String?
+
+  // Inventory
+  stock    Int     @default(0)
+  minStock Int     @default(0)
+
+  // Identifiers
+  sku      String? @unique
+  barcode  String?
+
+  // Dimensions
+  weight Float? // em kg
+  width  Float? // em cm
+  height Float? // em cm
+  depth  Float? // em cm
+
+  // Status
+  active Boolean @default(true)
+
+  // Images
+  images String[] // URLs
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  quoteItems QuoteItem[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([sku])
+  @@map("products")
+}
+
+model Service {
+  id String @id @default(uuid())
+
+  // Basic Info
+  name        String
+  description String?
+
+  // Pricing
+  price    Decimal @db.Decimal(10, 2)
+
+  // Category
+  category String?
+
+  // Duration (in minutes)
+  duration Int? @default(60)
+
+  // Status
+  active Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceItems ServiceItem[]
+
+  @@index([userId])
+  @@index([category])
+  @@map("services")
+}
+
+model Quote {
+  id String @id @default(uuid())
+
+  // Client
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  // Basic Info
+  description String?
+
+  // Pricing
+  totalValue        Decimal @db.Decimal(10, 2)
+  profitPercentage  Float?  // Margem de lucro
+
+  // Status
+  status QuoteStatus @default(DRAFT)
+
+  // Public Link
+  publicToken         String?   @unique
+  publicLinkExpiresAt DateTime?
+
+  // Validity
+  validUntil DateTime?
+
+  // Terms
+  terms String? // Termos e condições
+  notes String? // Observações internas
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  quoteItems    QuoteItem[]
+  serviceItems  ServiceItem[]
+  serviceOrders ServiceOrder[]
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([publicToken])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id String @id @default(uuid())
+
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  discount  Decimal @default(0) @db.Decimal(10, 2)
+
+  // Calculated: (quantity * unitPrice) - discount
+  total Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([quoteId])
+  @@index([productId])
+  @@map("quote_items")
+}
+
+model ServiceItem {
+  id String @id @default(uuid())
+
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  discount  Decimal @default(0) @db.Decimal(10, 2)
+
+  // Calculated: (quantity * unitPrice) - discount
+  total Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([quoteId])
+  @@index([serviceId])
+  @@map("service_items")
+}
+
+model ServiceOrder {
+  id String @id @default(uuid())
+
+  // Quote reference (optional)
+  quoteId String?
+  quote   Quote?  @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+
+  // Basic Info
+  title       String
+  description String?
+
+  // Status
+  status   ServiceOrderStatus @default(WAITING)
+  priority ServiceOrderPriority @default(MEDIUM)
+
+  // Dates
+  deadline        DateTime?
+  startedAt       DateTime?
+  pausedAt        DateTime?
+  finishedAt      DateTime?
+  deliveredAt     DateTime?
+
+  // Time tracking (in hours)
+  estimatedHours Decimal? @db.Decimal(10, 2)
+  actualHours    Decimal? @db.Decimal(10, 2)
+
+  // Notes
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quoteId])
+  @@index([status])
+  @@index([priority])
+  @@map("service_orders")
+}
+
+model Transaction {
+  id String @id @default(uuid())
+
+  // Type
+  type TransactionType
+
+  // Basic Info
+  description String
+  value       Decimal @db.Decimal(10, 2)
+
+  // Payment
+  paymentMethod PaymentMethod
+  category      String?
+
+  // Status
+  status TransactionStatus @default(PENDING)
+
+  // Dates
+  date      DateTime @default(now())
+  dueDate   DateTime?
+  paidAt    DateTime?
+
+  // Documents
+  documentNumber String? // Número de nota fiscal, boleto, etc
+  attachments    String[] // URLs de anexos
+
+  // Notes
+  notes String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([date])
+  @@map("transactions")
+}
+
+model CompanySettings {
+  id String @id @default(uuid())
+
+  // Company Info
+  name         String
+  tradeName    String? // Nome fantasia
+  document     String? // CNPJ
+  phone        String?
+  email        String?
+  website      String?
+
+  // Address
+  zipCode      String?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  country      String? @default("Brasil")
+
+  // Logo
+  logo String?
+
+  // Invoice settings
+  invoicePrefix String? @default("NF")
+  invoiceNumber Int     @default(1)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("company_settings")
+}
+
+model SystemSettings {
+  id String @id @default(uuid())
+
+  // Localization
+  timezone String @default("America/Sao_Paulo")
+  language String @default("pt-BR")
+  currency String @default("BRL")
+
+  // Date format
+  dateFormat String @default("DD/MM/YYYY")
+  timeFormat String @default("HH:mm")
+
+  // Decimal separator
+  decimalSeparator  String @default(",")
+  thousandSeparator String @default(".")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("system_settings")
+}
+
+model NotificationSettings {
+  id String @id @default(uuid())
+
+  // Email notifications
+  emailNotifications       Boolean @default(true)
+  emailQuoteApproved       Boolean @default(true)
+  emailQuoteRejected       Boolean @default(true)
+  emailServiceOrderUpdated Boolean @default(true)
+  emailTransactionPaid     Boolean @default(true)
+
+  // Push notifications
+  pushNotifications Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  // Action
+  action String // create, update, delete, login, etc
+  module String // users, products, quotes, etc
+
+  // Details
+  details Json?
+
+  // Request info
+  ipAddress String?
+  userAgent String?
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

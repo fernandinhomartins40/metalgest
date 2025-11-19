@@ -1,5 +1,9 @@
-import { apiClient, TokenManager } from './httpClient';
-import { toast } from "../components/ui/use-toast";
+/**
+ * Authentication Service
+ * Real implementation that communicates with the backend API
+ */
+
+import { httpClient, TokenManager } from './httpClient';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -29,262 +33,231 @@ const decryptData = (encryptedData) => {
   }
 };
 
-export const auth = {
-  // Login user
-  login: async (email, password, rememberMe = false, keepConnected = false) => {
+// Save user to storage
+const saveUser = (user) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  } catch (error) {
+    console.error('Error saving user:', error);
+  }
+};
+
+// Get current user from storage
+const getCurrentUser = () => {
+  try {
+    const userStr = localStorage.getItem(STORAGE_KEYS.USER);
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return null;
+  }
+};
+
+// Save credentials for remember me
+const saveCredentials = (email, password) => {
+  const encrypted = encryptData({ email, password });
+  if (encrypted) {
+    localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encrypted);
+  }
+};
+
+// Get saved credentials
+const getSavedCredentials = () => {
+  const encrypted = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+  return encrypted ? decryptData(encrypted) : null;
+};
+
+// Clear saved credentials
+const clearCredentials = () => {
+  localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
+};
+
+// Authentication Service
+export const AuthService = {
+  /**
+   * Login with email and password
+   */
+  async login(email, password, rememberMe = false) {
     try {
-      const response = await apiClient.post('/auth/login', {
+      const response = await httpClient.post('/auth/login', {
         email,
         password,
-        rememberMe,
-        keepConnected,
       });
 
-      if (response.success) {
-        const { user, token, refreshToken } = response.data;
-        
-        // Store tokens
-        TokenManager.setTokens(token, refreshToken);
-        
-        // Store user data
-        const userData = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          active: user.active,
-          emailVerified: user.emailVerified,
-          rememberMe,
-          keepConnected,
-        };
-        
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        // Store credentials if rememberMe is true
-        if (rememberMe) {
-          const encryptedCredentials = encryptData({ email, password });
-          if (encryptedCredentials) {
-            localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
-          }
-        } else {
-          localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
-        }
-        
+      if (!response.success) {
         return {
-          user: userData,
-          token,
-          refreshToken,
-          error: null,
+          success: false,
+          error: response.error?.message || 'Login failed',
         };
       }
-      
-      throw new Error(response.error?.message || 'Login failed');
-    } catch (error) {
-      console.error('Login error:', error);
+
+      // Save tokens
+      TokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
+
+      // Save user
+      saveUser(response.data.user);
+
+      // Handle remember me
+      if (rememberMe) {
+        saveCredentials(email, password);
+      } else {
+        clearCredentials();
+      }
+
       return {
-        user: null,
-        token: null,
-        refreshToken: null,
+        success: true,
+        user: response.data.user,
+      };
+    } catch (error) {
+      return {
+        success: false,
         error: error.message || 'Login failed',
       };
     }
   },
 
-  // Register user
-  register: async (name, email, password) => {
+  /**
+   * Register new user
+   */
+  async register(name, email, password) {
     try {
-      const response = await apiClient.post('/auth/register', {
+      const response = await httpClient.post('/auth/register', {
         name,
         email,
         password,
       });
 
-      if (response.success) {
-        const { user, token, refreshToken } = response.data;
-        
-        // Store tokens
-        TokenManager.setTokens(token, refreshToken);
-        
-        // Store user data
-        const userData = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          active: user.active,
-          emailVerified: user.emailVerified,
-        };
-        
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
+      if (!response.success) {
         return {
-          user: userData,
-          token,
-          refreshToken,
-          error: null,
+          success: false,
+          error: response.error?.message || 'Registration failed',
         };
       }
-      
-      throw new Error(response.error?.message || 'Registration failed');
-    } catch (error) {
-      console.error('Registration error:', error);
+
+      // Save tokens
+      TokenManager.setTokens(response.data.accessToken, response.data.refreshToken);
+
+      // Save user
+      saveUser(response.data.user);
+
       return {
-        user: null,
-        token: null,
-        refreshToken: null,
+        success: true,
+        user: response.data.user,
+      };
+    } catch (error) {
+      return {
+        success: false,
         error: error.message || 'Registration failed',
       };
     }
   },
 
-  // Logout user
-  logout: async () => {
+  /**
+   * Logout
+   */
+  async logout() {
     try {
-      const refreshToken = TokenManager.getRefreshToken();
-      
-      if (refreshToken) {
-        await apiClient.post('/auth/logout', { refreshToken });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear all local storage except remembered credentials
-      const credentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-      
+      // Call logout endpoint to invalidate refresh token
+      await httpClient.post('/auth/logout');
+
+      // Clear local storage
       TokenManager.clearTokens();
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
-      
-      // Keep remembered credentials if they exist
-      if (credentials) {
-        localStorage.setItem(STORAGE_KEYS.CREDENTIALS, credentials);
-      }
-    }
-  },
+      clearCredentials();
 
-  // Get current user
-  getCurrentUser: async () => {
-    try {
-      const token = TokenManager.getAccessToken();
-      
-      if (!token) {
-        return null;
-      }
-      
-      // Check if token is expired
-      if (TokenManager.isTokenExpired(token)) {
-        // Try to refresh token
-        try {
-          const refreshToken = TokenManager.getRefreshToken();
-          if (refreshToken) {
-            const response = await apiClient.post('/auth/refresh', {
-              refreshToken,
-            });
-            
-            if (response.success) {
-              TokenManager.setTokens(
-                response.data.token,
-                refreshToken
-              );
-            }
-          }
-        } catch (error) {
-          console.error('Token refresh error:', error);
-          TokenManager.clearTokens();
-          return null;
-        }
-      }
-      
-      // Get user data from API
-      const response = await apiClient.get('/auth/me');
-      
-      if (response.success) {
-        const userData = response.data;
-        
-        // Update stored user data
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        return userData;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Get current user error:', error);
-      TokenManager.clearTokens();
-      return null;
-    }
-  },
-
-  // Reset password
-  resetPassword: async (email) => {
-    try {
-      const response = await apiClient.post('/auth/request-password-reset', {
-        email,
-      });
-
-      if (response.success) {
-        toast({
-          title: "Email enviado",
-          description: "Verifique seu email para redefinir a senha.",
-        });
-        return { success: true, error: null };
-      }
-      
-      throw new Error(response.error?.message || 'Password reset failed');
-    } catch (error) {
-      console.error('Password reset error:', error);
       return {
-        success: false,
-        error: error.message || 'Password reset failed',
+        success: true,
+      };
+    } catch (error) {
+      // Even if API call fails, clear local data
+      TokenManager.clearTokens();
+      clearCredentials();
+
+      return {
+        success: true,
       };
     }
   },
 
-  // Update password
-  updatePassword: async (token, newPassword) => {
+  /**
+   * Get current user from API
+   */
+  async getCurrentUser() {
     try {
-      const response = await apiClient.post('/auth/reset-password', {
-        token,
-        password: newPassword,
-      });
+      const response = await httpClient.get('/auth/me');
 
-      if (response.success) {
-        toast({
-          title: "Senha atualizada",
-          description: "Sua senha foi redefinida com sucesso.",
-        });
-        return { success: true, error: null };
+      if (!response.success) {
+        return {
+          success: false,
+          user: null,
+        };
       }
-      
-      throw new Error(response.error?.message || 'Password update failed');
+
+      // Update stored user
+      saveUser(response.data);
+
+      return {
+        success: true,
+        user: response.data,
+      };
     } catch (error) {
-      console.error('Password update error:', error);
       return {
         success: false,
-        error: error.message || 'Password update failed',
+        user: null,
       };
     }
   },
 
-  // Change password (authenticated user)
-  changePassword: async (currentPassword, newPassword) => {
+  /**
+   * Update user profile
+   */
+  async updateProfile(userData) {
     try {
-      const response = await apiClient.put('/auth/change-password', {
+      const response = await httpClient.put('/auth/profile', userData);
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Profile update failed',
+        };
+      }
+
+      // Update stored user
+      saveUser(response.data);
+
+      return {
+        success: true,
+        user: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Profile update failed',
+      };
+    }
+  },
+
+  /**
+   * Change password
+   */
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await httpClient.post('/auth/change-password', {
         currentPassword,
         newPassword,
       });
 
-      if (response.success) {
-        toast({
-          title: "Senha alterada",
-          description: "Sua senha foi alterada com sucesso.",
-        });
-        return { success: true, error: null };
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password change failed',
+        };
       }
-      
-      throw new Error(response.error?.message || 'Password change failed');
+
+      return {
+        success: true,
+        message: response.data.message || 'Password changed successfully',
+      };
     } catch (error) {
-      console.error('Password change error:', error);
       return {
         success: false,
         error: error.message || 'Password change failed',
@@ -292,91 +265,80 @@ export const auth = {
     }
   },
 
-  // Update profile
-  updateProfile: async (updateData) => {
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(email) {
     try {
-      const response = await apiClient.put('/auth/profile', updateData);
+      const response = await httpClient.post('/auth/forgot-password', {
+        email,
+      });
 
-      if (response.success) {
-        const userData = response.data;
-        
-        // Update stored user data
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        toast({
-          title: "Perfil atualizado",
-          description: "Suas informações foram atualizadas com sucesso.",
-        });
-        
-        return { user: userData, error: null };
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password reset request failed',
+        };
       }
-      
-      throw new Error(response.error?.message || 'Profile update failed');
-    } catch (error) {
-      console.error('Profile update error:', error);
+
       return {
-        user: null,
-        error: error.message || 'Profile update failed',
+        success: true,
+        message: response.data.message || 'Password reset email sent',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Password reset request failed',
       };
     }
   },
 
-  // Get saved credentials
-  getSavedCredentials: () => {
+  /**
+   * Reset password with token
+   */
+  async resetPassword(token, newPassword) {
     try {
-      const encryptedCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-      
-      if (encryptedCredentials) {
-        return decryptData(encryptedCredentials);
+      const response = await httpClient.post('/auth/reset-password', {
+        token,
+        newPassword,
+      });
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Password reset failed',
+        };
       }
-      
-      return null;
+
+      return {
+        success: true,
+        message: response.data.message || 'Password reset successfully',
+      };
     } catch (error) {
-      console.error('Get saved credentials error:', error);
-      return null;
+      return {
+        success: false,
+        error: error.message || 'Password reset failed',
+      };
     }
   },
 
-  // Check if user is authenticated
-  isAuthenticated: () => {
-    const token = TokenManager.getAccessToken();
-    return token && !TokenManager.isTokenExpired(token);
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    const accessToken = TokenManager.getAccessToken();
+    return !!accessToken && !TokenManager.isTokenExpired(accessToken);
   },
 
-  // Get stored user data
-  getStoredUser: () => {
-    try {
-      const userData = localStorage.getItem(STORAGE_KEYS.USER);
-      return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-      console.error('Get stored user error:', error);
-      return null;
-    }
-  },
+  /**
+   * Get saved credentials
+   */
+  getSavedCredentials,
 
-  // Password validation
-  validatePassword: (password) => {
-    const hasMinLength = password.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    const strength = [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSymbol]
-      .filter(Boolean).length;
-
-    return {
-      isValid: hasMinLength && hasUpperCase && hasNumber && hasSymbol,
-      strength: strength / 5,
-      requirements: {
-        hasMinLength,
-        hasUpperCase,
-        hasLowerCase,
-        hasNumber,
-        hasSymbol,
-      },
-    };
-  },
+  /**
+   * Get current user from storage (without API call)
+   */
+  getCurrentUserFromStorage: getCurrentUser,
 };
 
-export default auth;
+export default AuthService;
