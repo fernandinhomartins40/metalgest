@@ -1,5 +1,10 @@
-import { apiClient, TokenManager } from './httpClient';
-import { toast } from "../components/ui/use-toast";
+/**
+ * Mock Authentication Service
+ * Este é um serviço de autenticação simulado que NÃO faz chamadas reais a nenhum backend.
+ * Serve apenas para manter a estrutura do frontend intacta até a implementação do novo backend.
+ */
+
+import { TokenManager } from './httpClient';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -8,6 +13,32 @@ const STORAGE_KEYS = {
   REFRESH_TOKEN: 'metalgest_refresh_token',
   CREDENTIALS: 'metalgest_credentials',
   PREFERENCES: 'metalgest_preferences',
+};
+
+// Mock user data
+const createMockUser = (email, name = 'Usuário Demo') => ({
+  id: Date.now().toString(),
+  email,
+  name,
+  role: 'admin',
+  active: true,
+  emailVerified: true,
+  plan: 'premium',
+  subscription_status: 'active',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
+// Mock token
+const createMockToken = () => {
+  const payload = {
+    sub: Date.now().toString(),
+    exp: Date.now() / 1000 + 86400, // 24h from now
+    iat: Date.now() / 1000
+  };
+  return btoa(JSON.stringify({ header: 'mock' })) + '.' +
+         btoa(JSON.stringify(payload)) + '.' +
+         btoa('signature');
 };
 
 // Encryption helper for remember me
@@ -30,306 +61,160 @@ const decryptData = (encryptedData) => {
 };
 
 export const auth = {
-  // Login user
+  // Login user (MOCK)
   login: async (email, password, rememberMe = false, keepConnected = false) => {
-    try {
-      const response = await apiClient.post('/auth/login', {
-        email,
-        password,
-        rememberMe,
-        keepConnected,
-      });
+    console.log('[MOCK LOGIN]', email);
 
-      if (response.success) {
-        const { user, token, refreshToken } = response.data;
-        
-        // Store tokens
-        TokenManager.setTokens(token, refreshToken);
-        
-        // Store user data
-        const userData = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          active: user.active,
-          emailVerified: user.emailVerified,
-          rememberMe,
-          keepConnected,
-        };
-        
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        // Store credentials if rememberMe is true
-        if (rememberMe) {
-          const encryptedCredentials = encryptData({ email, password });
-          if (encryptedCredentials) {
-            localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
-          }
-        } else {
-          localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
-        }
-        
-        return {
-          user: userData,
-          token,
-          refreshToken,
-          error: null,
-        };
+    // Simula delay de rede
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Cria usuário mock
+    const user = createMockUser(email);
+    const token = createMockToken();
+    const refreshToken = createMockToken();
+
+    // Store tokens
+    TokenManager.setTokens(token, refreshToken);
+
+    // Store user data
+    const userData = {
+      ...user,
+      rememberMe,
+      keepConnected,
+    };
+
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+
+    // Store credentials if rememberMe is true
+    if (rememberMe) {
+      const encryptedCredentials = encryptData({ email, password });
+      if (encryptedCredentials) {
+        localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
       }
-      
-      throw new Error(response.error?.message || 'Login failed');
-    } catch (error) {
-      console.error('Login error:', error);
-      return {
-        user: null,
-        token: null,
-        refreshToken: null,
-        error: error.message || 'Login failed',
-      };
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
     }
+
+    return {
+      user: userData,
+      token,
+      refreshToken,
+      error: null,
+    };
   },
 
-  // Register user
+  // Register user (MOCK)
   register: async (name, email, password) => {
-    try {
-      const response = await apiClient.post('/auth/register', {
-        name,
-        email,
-        password,
-      });
+    console.log('[MOCK REGISTER]', name, email);
 
-      if (response.success) {
-        const { user, token, refreshToken } = response.data;
-        
-        // Store tokens
-        TokenManager.setTokens(token, refreshToken);
-        
-        // Store user data
-        const userData = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          active: user.active,
-          emailVerified: user.emailVerified,
-        };
-        
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        return {
-          user: userData,
-          token,
-          refreshToken,
-          error: null,
-        };
-      }
-      
-      throw new Error(response.error?.message || 'Registration failed');
-    } catch (error) {
-      console.error('Registration error:', error);
-      return {
-        user: null,
-        token: null,
-        refreshToken: null,
-        error: error.message || 'Registration failed',
-      };
-    }
+    // Simula delay de rede
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Cria usuário mock
+    const user = createMockUser(email, name);
+    const token = createMockToken();
+    const refreshToken = createMockToken();
+
+    // Store tokens
+    TokenManager.setTokens(token, refreshToken);
+
+    // Store user data
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+
+    return {
+      user,
+      token,
+      refreshToken,
+      error: null,
+    };
   },
 
-  // Logout user
+  // Logout user (MOCK)
   logout: async () => {
-    try {
-      const refreshToken = TokenManager.getRefreshToken();
-      
-      if (refreshToken) {
-        await apiClient.post('/auth/logout', { refreshToken });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear all local storage except remembered credentials
-      const credentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-      
-      TokenManager.clearTokens();
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
-      
-      // Keep remembered credentials if they exist
-      if (credentials) {
-        localStorage.setItem(STORAGE_KEYS.CREDENTIALS, credentials);
-      }
+    console.log('[MOCK LOGOUT]');
+
+    // Clear all local storage except remembered credentials
+    const credentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+
+    TokenManager.clearTokens();
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
+
+    // Keep remembered credentials if they exist
+    if (credentials) {
+      localStorage.setItem(STORAGE_KEYS.CREDENTIALS, credentials);
     }
   },
 
-  // Get current user
+  // Get current user (MOCK)
   getCurrentUser: async () => {
-    try {
-      const token = TokenManager.getAccessToken();
-      
-      if (!token) {
-        return null;
-      }
-      
-      // Check if token is expired
-      if (TokenManager.isTokenExpired(token)) {
-        // Try to refresh token
-        try {
-          const refreshToken = TokenManager.getRefreshToken();
-          if (refreshToken) {
-            const response = await apiClient.post('/auth/refresh', {
-              refreshToken,
-            });
-            
-            if (response.success) {
-              TokenManager.setTokens(
-                response.data.token,
-                refreshToken
-              );
-            }
-          }
-        } catch (error) {
-          console.error('Token refresh error:', error);
-          TokenManager.clearTokens();
-          return null;
-        }
-      }
-      
-      // Get user data from API
-      const response = await apiClient.get('/auth/me');
-      
-      if (response.success) {
-        const userData = response.data;
-        
-        // Update stored user data
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        return userData;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Get current user error:', error);
-      TokenManager.clearTokens();
+    console.log('[MOCK GET CURRENT USER]');
+
+    const token = TokenManager.getAccessToken();
+
+    if (!token) {
       return null;
     }
+
+    // Get user data from local storage
+    const userData = localStorage.getItem(STORAGE_KEYS.USER);
+    return userData ? JSON.parse(userData) : null;
   },
 
-  // Reset password
+  // Reset password (MOCK)
   resetPassword: async (email) => {
-    try {
-      const response = await apiClient.post('/auth/request-password-reset', {
-        email,
-      });
-
-      if (response.success) {
-        toast({
-          title: "Email enviado",
-          description: "Verifique seu email para redefinir a senha.",
-        });
-        return { success: true, error: null };
-      }
-      
-      throw new Error(response.error?.message || 'Password reset failed');
-    } catch (error) {
-      console.error('Password reset error:', error);
-      return {
-        success: false,
-        error: error.message || 'Password reset failed',
-      };
-    }
+    console.log('[MOCK RESET PASSWORD]', email);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, error: null };
   },
 
-  // Update password
+  // Update password (MOCK)
   updatePassword: async (token, newPassword) => {
-    try {
-      const response = await apiClient.post('/auth/reset-password', {
-        token,
-        password: newPassword,
-      });
-
-      if (response.success) {
-        toast({
-          title: "Senha atualizada",
-          description: "Sua senha foi redefinida com sucesso.",
-        });
-        return { success: true, error: null };
-      }
-      
-      throw new Error(response.error?.message || 'Password update failed');
-    } catch (error) {
-      console.error('Password update error:', error);
-      return {
-        success: false,
-        error: error.message || 'Password update failed',
-      };
-    }
+    console.log('[MOCK UPDATE PASSWORD]');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, error: null };
   },
 
-  // Change password (authenticated user)
+  // Change password (MOCK)
   changePassword: async (currentPassword, newPassword) => {
-    try {
-      const response = await apiClient.put('/auth/change-password', {
-        currentPassword,
-        newPassword,
-      });
-
-      if (response.success) {
-        toast({
-          title: "Senha alterada",
-          description: "Sua senha foi alterada com sucesso.",
-        });
-        return { success: true, error: null };
-      }
-      
-      throw new Error(response.error?.message || 'Password change failed');
-    } catch (error) {
-      console.error('Password change error:', error);
-      return {
-        success: false,
-        error: error.message || 'Password change failed',
-      };
-    }
+    console.log('[MOCK CHANGE PASSWORD]');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, error: null };
   },
 
-  // Update profile
+  // Update profile (MOCK)
   updateProfile: async (updateData) => {
-    try {
-      const response = await apiClient.put('/auth/profile', updateData);
+    console.log('[MOCK UPDATE PROFILE]', updateData);
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (response.success) {
-        const userData = response.data;
-        
-        // Update stored user data
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-        
-        toast({
-          title: "Perfil atualizado",
-          description: "Suas informações foram atualizadas com sucesso.",
-        });
-        
-        return { user: userData, error: null };
-      }
-      
-      throw new Error(response.error?.message || 'Profile update failed');
-    } catch (error) {
-      console.error('Profile update error:', error);
-      return {
-        user: null,
-        error: error.message || 'Profile update failed',
-      };
+    // Get current user
+    const currentUser = auth.getStoredUser();
+    if (!currentUser) {
+      return { user: null, error: 'No user logged in' };
     }
+
+    // Update user data
+    const userData = {
+      ...currentUser,
+      ...updateData,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Save updated user
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+
+    return { user: userData, error: null };
   },
 
   // Get saved credentials
   getSavedCredentials: () => {
     try {
       const encryptedCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
-      
+
       if (encryptedCredentials) {
         return decryptData(encryptedCredentials);
       }
-      
+
       return null;
     } catch (error) {
       console.error('Get saved credentials error:', error);
@@ -340,7 +225,7 @@ export const auth = {
   // Check if user is authenticated
   isAuthenticated: () => {
     const token = TokenManager.getAccessToken();
-    return token && !TokenManager.isTokenExpired(token);
+    return !!token;
   },
 
   // Get stored user data

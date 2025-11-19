@@ -1,59 +1,33 @@
-services:
-  # Backend Node.js + SQLite3 (isolado)
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 3010
-      DATABASE_PATH: /app/data/sqlite.db
-      JWT_SECRET: ${JWT_SECRET:-metalgest-jwt-secret-production}
-      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-metalgest-refresh-secret-production}
-      FRONTEND_URL: ${FRONTEND_URL:-http://72.60.10.112:3010}
-    expose:
-      - "3010"
-    volumes:
-      - ./backend/data:/app/data
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3010/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - metalgest-network
+# Docker Compose - MetalGest Monorepo
+# Backend será implementado posteriormente com Node.js + TypeScript + Prisma + PostgreSQL
 
+services:
   # Frontend React/Vite
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: docker/frontend/Dockerfile
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://72.60.10.112:3010/api}
+      VITE_APP_NAME: MetalGest
+      VITE_APP_VERSION: "2.0.0"
     expose:
       - "3000"
-    depends_on:
-      - backend
     networks:
       - metalgest-network
 
-  # Nginx Proxy - Única porta exposta
+  # Nginx Proxy
   nginx:
     image: nginx:alpine
     restart: unless-stopped
     ports:
       - "3010:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./certs:/etc/nginx/certs
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - frontend
-      - backend
     networks:
       - metalgest-network
 
