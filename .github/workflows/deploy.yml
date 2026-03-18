@@ -21,8 +21,8 @@ jobs:
     env:
       VPS_HOST: 72.60.10.112
       VPS_USER: root
-      DEPLOY_PATH: /var/www/metalgest
-      BACKUP_PATH: /var/www/metalgest-backup
+      DEPLOY_PATH: /root/metalgest
+      BACKUP_PATH: /root/metalgest-backup
 
     steps:
       - name: Checkout repository
@@ -165,11 +165,16 @@ jobs:
               cp .env.example .env
             fi
 
+            APP_PORT=\$(awk -F= '/^APP_PORT=/{print \$2}' .env | tail -n1)
+            if [ -z \"\$APP_PORT\" ]; then
+              APP_PORT=80
+            fi
+
             chmod +x entrypoint.sh rollback.sh || true
             docker compose up -d --build
 
             for attempt in \$(seq 1 40); do
-              if curl -fsS http://localhost:\${APP_PORT:-80}/api/health >/dev/null; then
+              if curl -fsS http://localhost:\$APP_PORT/api/health >/dev/null; then
                 echo 'Health check passed'
                 exit 0
               fi
