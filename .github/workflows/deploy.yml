@@ -76,64 +76,126 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     needs: smoke-docker
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.VPS_HOST != '' && secrets.VPS_USER != '' && secrets.VPS_PATH != '' && secrets.VPS_SSH_KEY != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    env:
+      VPS_HOST: 72.60.10.112
+      VPS_USER: root
+      DEPLOY_PATH: /var/www/metalgest
+      BACKUP_PATH: /var/www/metalgest-backup
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare remote directory
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            mkdir -p ${{ secrets.VPS_PATH }}
-            cd ${{ secrets.VPS_PATH }}
-            if [ "$(find . -mindepth 1 -maxdepth 1 ! -name '.env' | wc -l)" -gt 0 ]; then
-              mkdir -p "${{ secrets.VPS_PATH }}-backup"
-              TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-              BACKUP_TARGET="${{ secrets.VPS_PATH }}-backup/${TIMESTAMP}"
-              mkdir -p "$BACKUP_TARGET"
-              find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec cp -R {} "$BACKUP_TARGET" \;
+      - name: Validate deploy secret
+        env:
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          if [ -z "$VPS_PASSWORD" ]; then
+            echo "VPS_PASSWORD secret is required"
+            exit 1
+          fi
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Package deployment files
+        run: |
+          tar -czf deploy.tar.gz \
+            apps \
+            docker \
+            packages \
+            scripts \
+            entrypoint.sh \
+            rollback.sh \
+            package.json \
+            package-lock.json \
+            docker-compose.yml \
+            .env.example \
+            turbo.json \
+            tsconfig.base.json
+
+      - name: Upload and deploy
+        env:
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          ssh_exec() {
+            sshpass -p "$VPS_PASSWORD" ssh \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=30 \
+              "$VPS_USER@$VPS_HOST" "$1"
+          }
+
+          scp_copy() {
+            sshpass -p "$VPS_PASSWORD" scp \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=30 \
+              "$1" "$VPS_USER@$VPS_HOST:$2"
+          }
+
+          ssh_exec "
+            set -e
+
+            mkdir -p '$DEPLOY_PATH' '$BACKUP_PATH'
+
+            if ! command -v curl >/dev/null 2>&1; then
+              apt-get update -y && apt-get install -y curl
             fi
+
+            if ! command -v docker >/dev/null 2>&1; then
+              curl -fsSL https://get.docker.com | sh
+              systemctl enable docker
+              systemctl start docker
+            fi
+
+            if ! docker compose version >/dev/null 2>&1; then
+              apt-get update -y
+              apt-get install -y docker-compose-plugin
+            fi
+
+            cd '$DEPLOY_PATH'
+
+            if [ \"\$(find . -mindepth 1 -maxdepth 1 ! -name '.env' | wc -l)\" -gt 0 ]; then
+              TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+              BACKUP_TARGET='$BACKUP_PATH'/\$TIMESTAMP
+              mkdir -p \"\$BACKUP_TARGET\"
+              find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec cp -R {} \"\$BACKUP_TARGET\" \;
+            fi
+
             docker compose down --remove-orphans || true
             find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
+          "
 
-      - name: Sync repository to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "apps,docker,packages,scripts,entrypoint.sh,rollback.sh,package.json,package-lock.json,docker-compose.yml,.env.example,turbo.json,tsconfig.base.json"
-          target: ${{ secrets.VPS_PATH }}
+          scp_copy "deploy.tar.gz" "$DEPLOY_PATH/deploy.tar.gz"
 
-      - name: Run deploy commands
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd ${{ secrets.VPS_PATH }}
+          ssh_exec "
+            set -e
+
+            cd '$DEPLOY_PATH'
+            tar -xzf deploy.tar.gz
+            rm -f deploy.tar.gz
+
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
+
             chmod +x entrypoint.sh rollback.sh || true
             docker compose up -d --build
 
-            for attempt in $(seq 1 40); do
-              if curl -fsS http://localhost:${APP_PORT:-80}/api/health > /dev/null; then
-                echo "Health check passed on attempt ${attempt}"
+            for attempt in \$(seq 1 40); do
+              if curl -fsS http://localhost:\${APP_PORT:-80}/api/health >/dev/null; then
+                echo 'Health check passed'
                 exit 0
               fi
 
-              echo "Waiting for application to become healthy (${attempt}/40)"
+              echo \"Waiting for application to become healthy (\$attempt/40)\"
               sleep 3
             done
 
-            echo "Deployment failed health check"
+            echo 'Deployment failed health check'
             docker compose logs --tail=200
             exit 1
+          "
