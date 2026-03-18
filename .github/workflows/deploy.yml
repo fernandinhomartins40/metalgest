@@ -86,6 +86,7 @@ jobs:
         run: |
           tar -czf deploy.tar.gz \
             apps \
+            deploy \
             docker \
             packages \
             scripts \
@@ -165,25 +166,72 @@ jobs:
               cp .env.example .env
             fi
 
-            APP_PORT=\$(awk -F= '/^APP_PORT=/{print \$2}' .env | tail -n1)
-            if [ -z \"\$APP_PORT\" ]; then
-              APP_PORT=80
-            fi
+            set -a
+            . ./.env
+            set +a
+
+            APP_PORT=\${APP_PORT:-80}
+            APP_DOMAIN=\${APP_DOMAIN:-metalgest.com.br}
+            APP_DOMAIN_WWW=\${APP_DOMAIN_WWW:-www.metalgest.com.br}
+            CERTBOT_EMAIL=\${CERTBOT_EMAIL:-}
+
+            install_host_nginx_site() {
+              if ! command -v nginx >/dev/null 2>&1; then
+                echo 'Host nginx not installed, skipping domain proxy setup'
+                return 0
+              fi
+
+              mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/html
+
+              TEMPLATE_PATH='$DEPLOY_PATH/deploy/nginx/metalgest.http.conf.template'
+              if [ -f \"/etc/letsencrypt/live/\$APP_DOMAIN/fullchain.pem\" ] && [ -f \"/etc/letsencrypt/live/\$APP_DOMAIN/privkey.pem\" ]; then
+                TEMPLATE_PATH='$DEPLOY_PATH/deploy/nginx/metalgest.ssl.conf.template'
+              fi
+
+              sed \
+                -e \"s/__APP_DOMAIN__/\$APP_DOMAIN/g\" \
+                -e \"s/__APP_DOMAIN_WWW__/\$APP_DOMAIN_WWW/g\" \
+                -e \"s/__APP_PORT__/\$APP_PORT/g\" \
+                \"\$TEMPLATE_PATH\" > /etc/nginx/sites-available/metalgest.conf
+
+              ln -sfn /etc/nginx/sites-available/metalgest.conf /etc/nginx/sites-enabled/metalgest.conf
+              nginx -t
+              systemctl reload nginx
+            }
 
             chmod +x entrypoint.sh rollback.sh || true
             docker compose up -d --build
 
+            APP_HEALTHY=0
             for attempt in \$(seq 1 40); do
               if curl -fsS http://localhost:\$APP_PORT/api/health >/dev/null; then
-                echo 'Health check passed'
-                exit 0
+                APP_HEALTHY=1
+                break
               fi
 
               echo \"Waiting for application to become healthy (\$attempt/40)\"
               sleep 3
             done
 
-            echo 'Deployment failed health check'
-            docker compose logs --tail=200
-            exit 1
+            if [ \"\$APP_HEALTHY\" -ne 1 ]; then
+              echo 'Deployment failed health check'
+              docker compose logs --tail=200
+              exit 1
+            fi
+
+            install_host_nginx_site
+
+            if command -v certbot >/dev/null 2>&1 && [ ! -f \"/etc/letsencrypt/live/\$APP_DOMAIN/fullchain.pem\" ]; then
+              if [ -n \"\$CERTBOT_EMAIL\" ]; then
+                certbot certonly --webroot -w /var/www/html -d \"\$APP_DOMAIN\" -d \"\$APP_DOMAIN_WWW\" --non-interactive --agree-tos --email \"\$CERTBOT_EMAIL\" || true
+              else
+                certbot certonly --webroot -w /var/www/html -d \"\$APP_DOMAIN\" -d \"\$APP_DOMAIN_WWW\" --non-interactive --agree-tos --register-unsafely-without-email || true
+              fi
+
+              if [ -f \"/etc/letsencrypt/live/\$APP_DOMAIN/fullchain.pem\" ] && [ -f \"/etc/letsencrypt/live/\$APP_DOMAIN/privkey.pem\" ]; then
+                install_host_nginx_site
+              fi
+            fi
+
+            echo 'Health check passed'
           "

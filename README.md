@@ -89,6 +89,8 @@ npm run smoke:docker
 - O PostgreSQL nao e exposto externamente no `docker-compose.yml`.
 - O upload de arquivos passa pelo backend proprio.
 - As alteracoes mutantes da API geram logs em `audit_logs`.
+- O deploy instala um vhost no Nginx do host para `metalgest.com.br` e `www.metalgest.com.br`, apontando para a porta definida em `APP_PORT`.
+- Se o host tiver `certbot` disponivel e ainda nao existir certificado para o dominio, o workflow tenta emitir o certificado na primeira implantacao usando `webroot`.
 
 Documentacao complementar:
 
