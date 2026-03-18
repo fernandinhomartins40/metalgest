@@ -57,6 +57,12 @@ jobs:
         if: github.event_name == 'push'
         run: npm run smoke:docker
 
+      - name: Dump container diagnostics on failure
+        if: failure() && github.event_name == 'push'
+        run: |
+          docker compose ps
+          docker compose logs --tail=200 postgres backend frontend nginx
+
       - name: Stop local containers
         if: always() && github.event_name == 'push'
         run: docker compose down -v

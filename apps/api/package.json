@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && tsc-alias",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate --schema ../../packages/database/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema ../../packages/database/prisma/schema.prisma",

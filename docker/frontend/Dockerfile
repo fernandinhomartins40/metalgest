@@ -11,6 +11,8 @@ RUN VITE_API_URL=$VITE_API_URL npm run build --workspace @metalgest/web
 
 FROM nginx:alpine AS runner
 
+RUN apk add --no-cache wget
+
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 COPY docker/frontend/default.conf /etc/nginx/conf.d/default.conf
 
