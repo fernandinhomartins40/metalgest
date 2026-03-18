@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import multer from 'multer';
 import { logger } from '@/utils/logger';
 
 // Custom error class
@@ -98,6 +99,15 @@ export const errorHandler = (
       error: {
         code: 'DATABASE_VALIDATION_ERROR',
         message: 'Invalid data provided',
+      },
+    });
+  }
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      error: {
+        code: 'UPLOAD_ERROR',
+        message: err.message,
       },
     });
   }

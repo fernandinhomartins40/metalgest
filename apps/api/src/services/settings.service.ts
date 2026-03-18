@@ -27,13 +27,13 @@ export class SettingsService {
     });
 
     // Convert array to key-value object
-    const settingsObject = settings.reduce((acc, setting) => {
+    const settingsObject = settings.reduce<Record<string, { value: string; updatedAt: Date }>>((acc, setting) => {
       acc[setting.key] = {
         value: setting.value,
         updatedAt: setting.updatedAt,
       };
       return acc;
-    }, {} as Record<string, any>);
+    }, {});
 
     return settingsObject;
   }
@@ -176,6 +176,7 @@ export class SettingsService {
   async getCompanySettings(userId: string) {
     const companyKeys = [
       'company.name',
+      'company.tradeName',
       'company.email',
       'company.phone',
       'company.address',
@@ -184,6 +185,7 @@ export class SettingsService {
       'company.zipCode',
       'company.country',
       'company.taxId',
+      'company.document',
       'company.logo',
       'company.website',
     ];
@@ -197,11 +199,11 @@ export class SettingsService {
       },
     });
 
-    const companySettings = settings.reduce((acc, setting) => {
+    const companySettings = settings.reduce<Record<string, string>>((acc, setting) => {
       const keyWithoutPrefix = setting.key.replace('company.', '');
       acc[keyWithoutPrefix] = setting.value;
       return acc;
-    }, {} as Record<string, string>);
+    }, {});
 
     return companySettings;
   }

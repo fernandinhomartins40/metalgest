@@ -373,17 +373,17 @@ export class ClientsService {
       name: client.name,
       type: client.type,
       counts: client._count,
-      quotes: quotesStats.reduce((acc, stat) => {
+      quotes: quotesStats.reduce<Record<string, { count: number; totalValue: unknown }>>((acc, stat) => {
         acc[stat.status] = {
           count: stat._count,
           totalValue: stat._sum.totalValue || 0,
         };
         return acc;
-      }, {} as any),
-      serviceOrders: ordersStats.reduce((acc, stat) => {
+      }, {}),
+      serviceOrders: ordersStats.reduce<Record<string, number>>((acc, stat) => {
         acc[stat.status] = stat._count;
         return acc;
-      }, {} as any),
+      }, {}),
     };
   }
 }

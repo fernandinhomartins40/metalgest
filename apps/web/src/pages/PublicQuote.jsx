@@ -1,210 +1,192 @@
-
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
-import { useToast } from "../components/ui/use-toast"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Loading } from "../components/ui/loading"
-import { FileText, CheckCircle, XCircle } from "lucide-react"
+import { useToast } from "../components/ui/use-toast"
 import { api } from "../services/api"
-import { pdf } from "../lib/pdf"
+import { formatCurrency, formatDate, quoteStatusLabel, statusTone } from "../lib/formatters"
 
 function PublicQuote() {
   const { token } = useParams()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
   const [quote, setQuote] = useState(null)
-  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
+    if (!token) return
+
+    const loadQuote = async () => {
+      try {
+        setLoading(true)
+        const data = await api.quotes.getByPublicToken(token)
+        setQuote(data)
+      } catch (requestError) {
+        setError(requestError.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadQuote()
   }, [token])
 
-  const loadQuote = async () => {
-    try {
-      setLoading(true)
-      const data = await api.quotes.getPublicQuote(token)
-      setQuote(data)
-    } catch (error) {
-      console.error("Error loading quote:", error)
-      setError(error.message)
-      toast({
-        title: "Erro",
-        description: error.message || "Ocorreu um erro ao carregar o orçamento.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleStatus = async (status) => {
+    if (!token) return
 
-  const handleResponse = async (status) => {
     try {
-      setLoading(true)
-      await api.quotes.updatePublicQuoteResponse(token, {
-        status,
-        comments: ""
-      })
-      
+      setActionLoading(true)
+      const updated = await api.quotes.updatePublicQuoteResponse(token, { status })
+      setQuote(updated)
       toast({
         title: "Resposta registrada",
-        description: status === "approved" 
-          ? "Orçamento aprovado com sucesso!"
-          : "Orçamento rejeitado."
+        description: `O orçamento foi marcado como ${quoteStatusLabel(updated.status).toLowerCase()}.`,
       })
-      
-      loadQuote()
-    } catch (error) {
-      console.error("Error updating response:", error)
+    } catch (requestError) {
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao registrar sua resposta.",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Falha ao responder",
+        description: requestError.message,
       })
     } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDownloadPDF = async () => {
-    try {
-      setLoading(true)
-      const doc = pdf.generateQuote(quote, { hideCosts: true })
-      doc.save(`orcamento-${quote.id.substring(0, 8)}.pdf`)
-    } catch (error) {
-      console.error("Error generating PDF:", error)
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao gerar o PDF.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
+      setActionLoading(false)
     }
   }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
         <Loading size="lg" />
       </div>
     )
   }
 
-  if (error) {
+  if (error || !quote) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Card className="w-full max-w-lg">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+        <Card className="w-full max-w-xl">
           <CardHeader>
-            <CardTitle className="text-red-500">Erro</CardTitle>
+            <CardTitle>Link indisponível</CardTitle>
+            <CardDescription>{error || "O orçamento solicitado não foi encontrado."}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p>{error}</p>
-          </CardContent>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Orçamento #{quote.id.substring(0, 8)}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          {/* Quote Details */}
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+    <div className="min-h-screen bg-slate-100 px-4 py-12">
+      <div className="mx-auto max-w-5xl">
+        <Card className="border-0 shadow-xl">
+          <CardHeader className="border-b border-slate-200">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <h3 className="font-semibold">Cliente</h3>
-                <p>{quote.client.name}</p>
-                <p>{quote.client.email}</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Orçamento</p>
+                <CardTitle className="mt-2">{quote.quoteNumber}</CardTitle>
+                <CardDescription className="mt-2">
+                  Emitido em {formatDate(quote.createdAt)} para {quote.client?.name}
+                </CardDescription>
               </div>
-              <div>
-                <h3 className="font-semibold">Data</h3>
-                <p>{new Date(quote.created_at).toLocaleDateString()}</p>
+              <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${statusTone(quote.status)}`}>
+                {quoteStatusLabel(quote.status)}
+              </span>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-8 pt-6">
+            <section className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Cliente</h3>
+                <p className="mt-3 font-medium text-slate-900">{quote.client?.name}</p>
+                <p className="text-sm text-slate-600">{quote.client?.email || "Sem e-mail"}</p>
+                <p className="text-sm text-slate-600">{quote.client?.phone || "Sem telefone"}</p>
               </div>
-            </div>
 
-            <div>
-              <h3 className="font-semibold">Descrição</h3>
-              <p>{quote.description}</p>
-            </div>
-          </div>
+              <div className="rounded-lg border border-slate-200 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Condições</h3>
+                <p className="mt-3 text-sm text-slate-700">
+                  Validade: {quote.validUntil ? formatDate(quote.validUntil) : "Sem vencimento"}
+                </p>
+                <p className="text-sm text-slate-700">Subtotal: {formatCurrency(quote.subtotal)}</p>
+                <p className="text-sm text-slate-700">Desconto: {formatCurrency(quote.discount)}</p>
+                <p className="text-sm text-slate-700">Impostos: {formatCurrency(quote.tax)}</p>
+              </div>
+            </section>
 
-          {/* Items Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Item</th>
-                  <th className="text-left p-2">Quantidade</th>
-                  <th className="text-right p-2">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.items.map((item, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="p-2">{item.product.name}</td>
-                    <td className="p-2">{item.quantity}</td>
-                    <td className="p-2 text-right">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                      }).format(item.quantity * item.unitPrice)}
+            <section className="overflow-hidden rounded-lg border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Item
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Quantidade
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Unitário
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {quote.items?.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3 text-sm text-slate-700">
+                        {item.description || item.product?.name || item.service?.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right text-sm text-slate-700">
+                        {formatCurrency(item.unitPrice)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-slate-900">
+                        {formatCurrency(item.totalPrice)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50">
+                  <tr>
+                    <td className="px-4 py-4 text-right text-sm font-semibold text-slate-700" colSpan={3}>
+                      Total do orçamento
+                    </td>
+                    <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900">
+                      {formatCurrency(quote.totalValue)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan="2" className="p-2 text-right font-semibold">
-                    Total:
-                  </td>
-                  <td className="p-2 text-right font-semibold">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(quote.total_value)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </tfoot>
+              </table>
+            </section>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-between items-center">
-            <Button
-              variant="outline"
-              onClick={handleDownloadPDF}
-              disabled={loading}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Baixar PDF
-            </Button>
+            {quote.notes ? (
+              <section className="rounded-lg border border-slate-200 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Observações</h3>
+                <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{quote.notes}</p>
+              </section>
+            ) : null}
 
-            <div className="flex gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => handleResponse("rejected")}
-                disabled={loading}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Rejeitar
+            <div className="flex flex-col gap-3 md:flex-row md:justify-end">
+              <Button variant="outline" onClick={() => window.print()}>
+                Imprimir / PDF
               </Button>
               <Button
-                variant="default"
-                onClick={() => handleResponse("approved")}
-                disabled={loading}
+                variant="destructive"
+                onClick={() => handleStatus("REJECTED")}
+                disabled={actionLoading}
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
+                Rejeitar
+              </Button>
+              <Button onClick={() => handleStatus("APPROVED")} disabled={actionLoading}>
                 Aprovar
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

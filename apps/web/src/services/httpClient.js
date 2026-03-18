@@ -1,275 +1,238 @@
-/**
- * HTTP Client for MetalGest API
- * Real implementation with token management and automatic refresh
- */
+const API_URL = import.meta.env.VITE_API_URL || "/api"
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3010/api';
+class HttpError extends Error {
+  constructor(message, options = {}) {
+    super(message)
+    this.name = "HttpError"
+    this.status = options.status
+    this.code = options.code
+    this.details = options.details
+  }
+}
 
-// Token management
 const TokenManager = {
-  getAccessToken: () => localStorage.getItem('metalgest_access_token'),
+  getAccessToken: () => localStorage.getItem("metalgest_access_token"),
 
-  getRefreshToken: () => localStorage.getItem('metalgest_refresh_token'),
-
-  setTokens: (accessToken, refreshToken) => {
-    if (accessToken) localStorage.setItem('metalgest_access_token', accessToken);
-    if (refreshToken) localStorage.setItem('metalgest_refresh_token', refreshToken);
+  setAccessToken: (accessToken) => {
+    if (accessToken) {
+      localStorage.setItem("metalgest_access_token", accessToken)
+    }
   },
 
   clearTokens: () => {
-    localStorage.removeItem('metalgest_access_token');
-    localStorage.removeItem('metalgest_refresh_token');
-    localStorage.removeItem('metalgest_user');
+    localStorage.removeItem("metalgest_access_token")
+    localStorage.removeItem("metalgest_user")
   },
 
   isTokenExpired: (token) => {
-    if (!token) return true;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 < Date.now();
-    } catch {
-      return true;
-    }
-  }
-};
+    if (!token) return true
 
-// HTTP Client class
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]))
+      return payload.exp * 1000 <= Date.now()
+    } catch {
+      return true
+    }
+  },
+}
+
 class HttpClient {
   constructor() {
-    this.baseURL = API_URL;
-    this.isRefreshing = false;
-    this.refreshSubscribers = [];
+    this.baseURL = API_URL
+    this.isRefreshing = false
+    this.refreshPromise = null
   }
 
-  onRefreshed(token) {
-    this.refreshSubscribers.forEach((callback) => callback(token));
-    this.refreshSubscribers = [];
-  }
+  async parseResponse(response) {
+    const text = await response.text()
+    if (!text) {
+      return null
+    }
 
-  addRefreshSubscriber(callback) {
-    this.refreshSubscribers.push(callback);
+    try {
+      return JSON.parse(text)
+    } catch {
+      return text
+    }
   }
 
   async refreshAccessToken() {
-    const refreshToken = TokenManager.getRefreshToken();
-    if (!refreshToken) {
-      TokenManager.clearTokens();
-      window.location.href = '/login';
-      throw new Error('No refresh token available');
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise
     }
 
-    try {
-      const response = await fetch(`${this.baseURL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
+    this.isRefreshing = true
+    this.refreshPromise = fetch(`${this.baseURL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    })
+      .then(async (response) => {
+        const payload = await this.parseResponse(response)
 
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
+        if (!response.ok || !payload?.accessToken) {
+          throw new HttpError(payload?.error?.message || "Failed to refresh token", {
+            status: response.status,
+            code: payload?.error?.code,
+            details: payload?.error?.details,
+          })
+        }
 
-      const data = await response.json();
-      TokenManager.setTokens(data.accessToken, data.refreshToken);
-      return data.accessToken;
-    } catch (error) {
-      TokenManager.clearTokens();
-      window.location.href = '/login';
-      throw error;
-    }
+        TokenManager.setAccessToken(payload.accessToken)
+        return payload.accessToken
+      })
+      .finally(() => {
+        this.isRefreshing = false
+        this.refreshPromise = null
+      })
+
+    return this.refreshPromise
   }
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    let accessToken = TokenManager.getAccessToken();
+  async request(endpoint, options = {}, retry = true) {
+    const url = `${this.baseURL}${endpoint}`
+    let accessToken = TokenManager.getAccessToken()
 
-    // Check if token is expired and refresh if needed
     if (accessToken && TokenManager.isTokenExpired(accessToken)) {
-      if (!this.isRefreshing) {
-        this.isRefreshing = true;
-        try {
-          accessToken = await this.refreshAccessToken();
-          this.isRefreshing = false;
-          this.onRefreshed(accessToken);
-        } catch (error) {
-          this.isRefreshing = false;
-          throw error;
+      try {
+        accessToken = await this.refreshAccessToken()
+      } catch (error) {
+        TokenManager.clearTokens()
+        return {
+          success: false,
+          data: null,
+          error: {
+            code: error.code || "TOKEN_REFRESH_FAILED",
+            message: error.message || "Authentication expired",
+            details: error.details,
+            status: error.status || 401,
+          },
         }
-      } else {
-        // Wait for token refresh
-        accessToken = await new Promise((resolve) => {
-          this.addRefreshSubscriber((token) => {
-            resolve(token);
-          });
-        });
       }
     }
 
-    // Build headers
     const headers = {
-      'Content-Type': 'application/json',
       ...options.headers,
-    };
-
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    // Make request
+    if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json"
+    }
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
-      });
+        credentials: "include",
+      })
 
-      // Handle 401 Unauthorized
-      if (response.status === 401) {
-        // Try to refresh token once
-        if (!this.isRefreshing) {
-          this.isRefreshing = true;
-          try {
-            const newToken = await this.refreshAccessToken();
-            this.isRefreshing = false;
-            this.onRefreshed(newToken);
+      const payload = await this.parseResponse(response)
 
-            // Retry original request with new token
-            headers['Authorization'] = `Bearer ${newToken}`;
-            const retryResponse = await fetch(url, {
+      if (response.status === 401 && retry) {
+        try {
+          const refreshedToken = await this.refreshAccessToken()
+          return this.request(
+            endpoint,
+            {
               ...options,
-              headers,
-            });
-
-            if (!retryResponse.ok) {
-              const errorData = await retryResponse.json().catch(() => ({ error: { message: 'Request failed' } }));
-              return {
-                success: false,
-                data: null,
-                error: errorData.error || { message: 'Request failed' },
-              };
-            }
-
-            const data = await retryResponse.json();
-            return {
-              success: true,
-              data,
-              error: null,
-            };
-          } catch (error) {
-            this.isRefreshing = false;
-            TokenManager.clearTokens();
-            window.location.href = '/login';
-            throw error;
-          }
+              headers: {
+                ...options.headers,
+                Authorization: `Bearer ${refreshedToken}`,
+              },
+            },
+            false
+          )
+        } catch {
+          TokenManager.clearTokens()
         }
       }
 
-      // Handle other error responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: 'Request failed' } }));
         return {
           success: false,
           data: null,
-          error: errorData.error || { message: 'Request failed' },
-        };
+          error: {
+            code: payload?.error?.code || "REQUEST_FAILED",
+            message: payload?.error?.message || "Request failed",
+            details: payload?.error?.details,
+            status: response.status,
+          },
+        }
       }
 
-      // Success response
-      const data = await response.json();
       return {
         success: true,
-        data,
+        data: payload,
         error: null,
-      };
-    } catch (error) {
-      console.error('HTTP request error:', error);
-      return {
-        success: false,
-        data: null,
-        error: {
-          code: 'NETWORK_ERROR',
-          message: error.message || 'Network error occurred',
-        },
-      };
-    }
-  }
-
-  async get(endpoint, params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-    return this.request(url, { method: 'GET' });
-  }
-
-  async post(endpoint, data = {}) {
-    return this.request(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async put(endpoint, data = {}) {
-    return this.request(endpoint, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async patch(endpoint, data = {}) {
-    return this.request(endpoint, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
-  }
-
-  async upload(endpoint, formData) {
-    let accessToken = TokenManager.getAccessToken();
-
-    const headers = {};
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: 'Upload failed' } }));
-        return {
-          success: false,
-          data: null,
-          error: errorData.error || { message: 'Upload failed' },
-        };
       }
-
-      const data = await response.json();
-      return {
-        success: true,
-        data,
-        error: null,
-      };
     } catch (error) {
       return {
         success: false,
         data: null,
         error: {
-          code: 'UPLOAD_ERROR',
-          message: error.message || 'Upload error occurred',
+          code: "NETWORK_ERROR",
+          message: error.message || "Network error occurred",
+          status: 0,
         },
-      };
+      }
     }
+  }
+
+  get(endpoint, params = {}) {
+    const query = new URLSearchParams(
+      Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          acc[key] = String(value)
+        }
+
+        return acc
+      }, {})
+    ).toString()
+
+    return this.request(query ? `${endpoint}?${query}` : endpoint, { method: "GET" })
+  }
+
+  post(endpoint, data = {}) {
+    return this.request(endpoint, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  put(endpoint, data = {}) {
+    return this.request(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  patch(endpoint, data = {}) {
+    return this.request(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  }
+
+  delete(endpoint) {
+    return this.request(endpoint, { method: "DELETE" })
+  }
+
+  upload(endpoint, formData) {
+    return this.request(endpoint, {
+      method: "POST",
+      body: formData,
+      headers: {},
+    })
   }
 }
 
-// Export singleton instance
-export const httpClient = new HttpClient();
-export { TokenManager };
-export default httpClient;
+export const httpClient = new HttpClient()
+export { HttpError, TokenManager }
+export default httpClient

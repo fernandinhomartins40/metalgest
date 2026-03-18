@@ -26,7 +26,7 @@ export class UsersController {
    * GET /api/users/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const user = await usersService.getUserById(id);
     res.json(user);
   });
@@ -52,7 +52,7 @@ export class UsersController {
    * PUT /api/users/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { name, email, role, active, emailVerified } = req.body;
     const user = await usersService.updateUser(id, {
       name,
@@ -69,7 +69,7 @@ export class UsersController {
    * POST /api/users/:id/reset-password
    */
   resetPassword = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { newPassword } = req.body;
     const result = await usersService.resetPassword(id, newPassword);
     res.json(result);
@@ -80,7 +80,7 @@ export class UsersController {
    * DELETE /api/users/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await usersService.deleteUser(id);
     res.json(result);
   });
@@ -90,7 +90,7 @@ export class UsersController {
    * GET /api/users/:id/stats
    */
   stats = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const stats = await usersService.getUserStats(id);
     res.json(stats);
   });

@@ -1,277 +1,136 @@
-
-import React, { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { useForm } from "react-hook-form"
-import { motion } from "framer-motion"
-import { useToast } from "../components/ui/use-toast"
+import React, { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { LogIn } from "lucide-react"
 import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
-import { ArrowRight, LogIn, KeyRound } from "lucide-react"
-import PasswordInput from "../components/auth/PasswordInput"
+import auth from "../services/auth"
 
 function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
-  const { login } = useAuth()
-  const [isResetting, setIsResetting] = useState(false)
-  const [loginSuccess, setLoginSuccess] = useState(false)
-  const { register, handleSubmit, formState: { errors, isSubmitting }, getValues, setValue } = useForm()
+  const { login, isAuthenticated } = useAuth()
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    rememberMe: true,
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load saved credentials on mount
   useEffect(() => {
-    const savedCredentials = localStorage.getItem('savedCredentials')
-    if (savedCredentials) {
-      try {
-        const parsed = JSON.parse(savedCredentials)
-        if (parsed?.email) {
-          setValue("email", parsed.email)
-          setValue("password", parsed.password)
-          setValue("rememberMe", true)
-        }
-      } catch (e) {
-        console.error('Error parsing saved credentials:', e)
-      }
+    const saved = auth.getSavedCredentials()
+    if (saved?.email) {
+      setForm((current) => ({ ...current, email: saved.email }))
     }
-  }, [setValue])
+  }, [])
 
-  const onSubmit = async (data) => {
-    try {
-      const result = await login(data.email, data.password)
-      
-      // Save credentials if remember me is checked
-      if (data.rememberMe) {
-        localStorage.setItem('savedCredentials', JSON.stringify({
-          email: data.email,
-          password: data.password
-        }))
-      } else {
-        localStorage.removeItem('savedCredentials')
-      }
-      
-      // Show success state
-      setLoginSuccess(true)
-      
-      // Show success toast with user name if available
-      const userName = result.user?.name || "Usuário"
-      toast({
-        title: "✅ Login realizado com sucesso!",
-        description: `Bem-vindo de volta, ${userName}!`,
-        duration: 3000
-      })
-      
-      // Delay to show success state and toast before navigation
-      setTimeout(() => {
-        navigate("/app", { replace: true })
-      }, 1500)
-      
-    } catch (error) {
-      console.error("Login error:", error)
-      
-      let errorMessage = "Credenciais inválidas. Verifique seus dados e tente novamente."
-      let errorTitle = "❌ Erro no login"
-      
-      // Handle specific error types
-      if (error.message?.includes("UNAUTHORIZED")) {
-        errorTitle = "🔐 Credenciais Inválidas"
-        errorMessage = "Email ou senha incorretos. Verifique seus dados e tente novamente."
-      } else if (error.message?.includes("inactive")) {
-        errorTitle = "⚠️ Conta Inativa"
-        errorMessage = "Sua conta está inativa. Entre em contato com o suporte."
-      } else if (error.isNetworkError || error.message?.includes("Failed to fetch")) {
-        errorTitle = "🌐 Erro de Conexão"
-        errorMessage = "Não foi possível conectar ao servidor. Verifique sua conexão de internet e tente novamente."
-      } else if (error.isCorsError || error.message?.includes("CORS")) {
-        errorTitle = "🔧 Erro de Configuração"
-        errorMessage = "Problema temporário do servidor. Tente novamente em alguns minutos."
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-      
-      toast({
-        variant: "destructive",
-        title: errorTitle,
-        description: errorMessage,
-        duration: 5000
-      })
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/app", { replace: true })
     }
+  }, [isAuthenticated, navigate])
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
+    setForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }))
   }
 
-  const handleResetPassword = async () => {
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setIsSubmitting(true)
+
     try {
-      setIsResetting(true)
-      const email = getValues("email")
-      if (!email) {
-        throw new Error("Por favor, insira seu email")
-      }
-      
-      // TODO: Implement password reset with tRPC
+      await login(form.email, form.password, form.rememberMe)
+
       toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "O reset de senha será implementado em breve"
+        title: "Sessão iniciada",
+        description: "Autenticação concluída com sucesso.",
       })
+
+      const redirectTo = location.state?.from?.pathname || "/app"
+      navigate(redirectTo, { replace: true })
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Erro ao resetar senha",
-        description: error.message
+        title: "Falha no login",
+        description: error.message,
       })
     } finally {
-      setIsResetting(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-0 -left-4 w-72 h-72 bg-primary/10 rounded-full filter blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary/10 rounded-full filter blur-3xl"></div>
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-md w-full"
-          >
-            <div className="text-center">
-              <motion.h1 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent"
-              >
-                Metalgest
-              </motion.h1>
-              <h2 className="mt-6 text-3xl font-bold text-gray-900">
-                Bem-vindo de volta
-              </h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Entre com suas credenciais para acessar o sistema
-              </p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
+      <Card className="w-full max-w-md border-0 shadow-xl">
+        <CardHeader className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
+          <CardTitle>Acessar plataforma</CardTitle>
+          <CardDescription>Use as credenciais da sua instalação para entrar.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="email">
+                E-mail
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                required
+              />
             </div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-8"
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="password">
+                Senha
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                required
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                name="rememberMe"
+                type="checkbox"
+                checked={form.rememberMe}
+                onChange={handleChange}
+              />
+              Lembrar e-mail neste navegador
+            </label>
+
+            <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+              <LogIn className="h-4 w-4" />
+              {isSubmitting ? "Entrando..." : "Entrar"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="link"
+              className="w-full"
+              onClick={() => navigate("/register")}
             >
-              <div className="bg-white/60 backdrop-blur-lg p-8 rounded-2xl shadow-lg border border-gray-100">
-                <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      {...register("email", { required: "Email é obrigatório" })}
-                      type="email"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200"
-                      placeholder="seu@email.com"
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                    )}
-                  </div>
-
-                  <PasswordInput
-                    register={register}
-                    name="password"
-                    label="Senha"
-                    placeholder="••••••••"
-                    error={errors.password}
-                    validation={{ required: "Senha é obrigatória" }}
-                  />
-
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <input
-                        {...register("rememberMe")}
-                        type="checkbox"
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                      />
-                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                        Lembrar-me
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        {...register("keepConnected")}
-                        type="checkbox"
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                      />
-                      <label htmlFor="keep-connected" className="ml-2 block text-sm text-gray-700">
-                        Manter-me conectado
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="link"
-                      disabled={isResetting}
-                      onClick={handleResetPassword}
-                      className="text-sm text-primary hover:text-primary/90 flex items-center gap-1"
-                    >
-                      <KeyRound className="w-4 h-4" />
-                      {isResetting ? "Enviando..." : "Esqueci minha senha"}
-                    </Button>
-                  </div>
-
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || loginSuccess}
-                      className={`w-full py-2 px-4 flex items-center justify-center gap-2 transition-all duration-200 text-white rounded-lg ${
-                        loginSuccess 
-                          ? 'bg-green-500 hover:bg-green-500' 
-                          : 'bg-primary hover:bg-primary/90'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {loginSuccess ? (
-                        <>
-                          <div className="w-4 h-4 rounded-full bg-white text-green-500 flex items-center justify-center text-xs">✓</div>
-                          Sucesso! Redirecionando...
-                        </>
-                      ) : isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          Entrando...
-                        </>
-                      ) : (
-                        <>
-                          Entrar
-                          <LogIn className="w-4 h-4" />
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                </form>
-              </div>
-
-              <div className="mt-6 text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => navigate("/register")}
-                  className="text-sm text-primary hover:text-primary/90 flex items-center justify-center gap-2"
-                >
-                  Não tem uma conta? Cadastre-se
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
+              Criar primeira conta
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

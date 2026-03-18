@@ -27,7 +27,7 @@ export class ServiceOrdersController {
    * GET /api/service-orders/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const order = await serviceOrdersService.getServiceOrderById(id, req.user!.id, req.user!.role);
     res.json(order);
   });
@@ -46,7 +46,7 @@ export class ServiceOrdersController {
    * PUT /api/service-orders/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const order = await serviceOrdersService.updateServiceOrder(
       id,
       req.user!.id,
@@ -61,7 +61,7 @@ export class ServiceOrdersController {
    * PATCH /api/service-orders/:id/status
    */
   updateStatus = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { status } = req.body;
     const order = await serviceOrdersService.updateServiceOrderStatus(
       id,
@@ -77,7 +77,7 @@ export class ServiceOrdersController {
    * DELETE /api/service-orders/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await serviceOrdersService.deleteServiceOrder(id, req.user!.id, req.user!.role);
     res.json(result);
   });

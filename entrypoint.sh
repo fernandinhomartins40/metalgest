@@ -1,27 +1,11 @@
 #!/bin/bash
 
-# Entrypoint script for MetalGest deployment
-set -e
+set -euo pipefail
 
-echo "=== MetalGest Deployment Entrypoint ==="
+SCHEMA_PATH="${SCHEMA_PATH:-/app/packages/database/prisma/schema.prisma}"
 
-# Wait for database to be ready
-echo "Waiting for database to be ready..."
-until nc -z db 5432; do
-  echo "Database is not ready yet, waiting..."
-  sleep 2
-done
+echo "Running Prisma migrate deploy"
+npx prisma migrate deploy --schema "$SCHEMA_PATH"
 
-echo "Database is ready!"
-
-# Run database migrations
-echo "Running database migrations..."
-cd /app && npm run db:push
-
-# Generate Prisma client
-echo "Generating Prisma client..."
-cd /app && npm run db:generate
-
-# Start the application
-echo "Starting MetalGest application..."
+echo "Starting application"
 exec "$@"

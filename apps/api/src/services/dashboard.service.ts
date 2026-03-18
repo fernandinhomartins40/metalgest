@@ -2,6 +2,18 @@ import { prisma } from '@/config/database';
 import { QuoteStatus, ServiceOrderStatus, TransactionType } from '@prisma/client';
 
 export class DashboardService {
+  private toNumber(value: { toNumber(): number } | number | null | undefined) {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (value && typeof value === 'object' && 'toNumber' in value) {
+      return value.toNumber();
+    }
+
+    return 0;
+  }
+
   /**
    * Get comprehensive dashboard statistics
    */
@@ -128,35 +140,43 @@ export class DashboardService {
       }),
 
       // Low stock products
-      prisma.$queryRaw<Array<any>>`
-        SELECT * FROM "Product"
-        WHERE ${userRole !== 'ADMIN' ? prisma.$queryRaw`"userId" = ${userId} AND` : prisma.$queryRaw``}
-        "stock" <= "minStock"
-        AND "active" = true
-        ORDER BY "stock" ASC
-        LIMIT 10
-      `,
+      prisma.product.findMany({
+        where: {
+          ...(userRole !== 'ADMIN' ? { userId } : {}),
+          active: true,
+          stock: {
+            lte: prisma.product.fields.minStock,
+          },
+        },
+        orderBy: {
+          stock: 'asc',
+        },
+        take: 10,
+      }),
     ]);
 
     // Process quotes stats
-    const quotesStatsByStatus = quotesStats.reduce((acc, stat) => {
+    const quotesStatsByStatus = quotesStats.reduce<Record<string, { count: number; totalValue: number }>>((acc, stat) => {
       acc[stat.status] = {
         count: stat._count,
-        totalValue: stat._sum.totalValue || 0,
+        totalValue: this.toNumber(stat._sum.totalValue),
       };
       return acc;
-    }, {} as Record<string, { count: number; totalValue: number }>);
+    }, {});
 
     // Process service orders stats
-    const ordersStatsByStatus = serviceOrdersStats.reduce((acc, stat) => {
+    const ordersStatsByStatus = serviceOrdersStats.reduce<Record<string, number>>((acc, stat) => {
       acc[stat.status] = stat._count;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
 
     // Calculate totals
-    const totalQuotes = quotesStats.reduce((sum, stat) => sum + stat._count, 0);
-    const totalQuotesValue = quotesStats.reduce((sum, stat) => sum + (stat._sum.totalValue || 0), 0);
-    const totalServiceOrders = serviceOrdersStats.reduce((sum, stat) => sum + stat._count, 0);
+    const totalQuotes = quotesStats.reduce((sum: number, stat) => sum + stat._count, 0);
+    const totalQuotesValue = quotesStats.reduce(
+      (sum: number, stat) => sum + this.toNumber(stat._sum.totalValue),
+      0
+    );
+    const totalServiceOrders = serviceOrdersStats.reduce((sum: number, stat) => sum + stat._count, 0);
 
     return {
       counts: {
@@ -176,9 +196,9 @@ export class DashboardService {
         byStatus: ordersStatsByStatus,
       },
       revenue: {
-        monthly: monthlyRevenue._sum.amount || 0,
-        yearly: yearlyRevenue._sum.amount || 0,
-        last30Days: last30DaysRevenue._sum.amount || 0,
+        monthly: this.toNumber(monthlyRevenue._sum.amount),
+        yearly: this.toNumber(yearlyRevenue._sum.amount),
+        last30Days: this.toNumber(last30DaysRevenue._sum.amount),
       },
       recent: {
         quotes: recentQuotes,
@@ -221,9 +241,9 @@ export class DashboardService {
     // Group by month
     const monthlyData: number[] = new Array(12).fill(0);
 
-    transactions.forEach((transaction) => {
+    transactions.forEach((transaction: (typeof transactions)[number]) => {
       const month = transaction.date.getMonth();
-      monthlyData[month] += transaction.amount;
+      monthlyData[month] += this.toNumber(transaction.amount);
     });
 
     return {
@@ -251,7 +271,7 @@ export class DashboardService {
       prisma.quote.count({
         where: {
           ...where,
-          status: QuoteStatus.ACCEPTED,
+          status: QuoteStatus.APPROVED,
         },
       }),
     ]);
@@ -270,7 +290,7 @@ export class DashboardService {
    */
   async getTopClients(userId: string, userRole: string, limit: number = 10) {
     const where: any = {
-      status: QuoteStatus.ACCEPTED,
+      status: QuoteStatus.APPROVED,
     };
 
     // Non-admin users can only see their own data
@@ -294,7 +314,7 @@ export class DashboardService {
     });
 
     // Group by client
-    const clientRevenue = quotes.reduce((acc, quote) => {
+    const clientRevenue = quotes.reduce<Record<string, { client: (typeof quotes)[number]['client']; totalRevenue: number; quotesCount: number }>>((acc, quote) => {
       const clientId = quote.clientId;
       if (!acc[clientId]) {
         acc[clientId] = {
@@ -303,14 +323,14 @@ export class DashboardService {
           quotesCount: 0,
         };
       }
-      acc[clientId].totalRevenue += quote.totalValue;
+      acc[clientId].totalRevenue += this.toNumber(quote.totalValue);
       acc[clientId].quotesCount += 1;
       return acc;
-    }, {} as Record<string, any>);
+    }, {});
 
     // Sort by revenue and limit
     const topClients = Object.values(clientRevenue)
-      .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
       .slice(0, limit);
 
     return topClients;

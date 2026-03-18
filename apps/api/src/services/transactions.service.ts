@@ -1,8 +1,20 @@
 import { prisma } from '@/config/database';
 import { AppError } from '@/middlewares/error';
-import { TransactionType, TransactionCategory } from '@prisma/client';
+import { TransactionType } from '@prisma/client';
 
 export class TransactionsService {
+  private toNumber(value: { toNumber(): number } | number | null | undefined) {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (value && typeof value === 'object' && 'toNumber' in value) {
+      return value.toNumber();
+    }
+
+    return 0;
+  }
+
   /**
    * List all transactions with pagination and filters
    */
@@ -14,7 +26,7 @@ export class TransactionsService {
       limit?: number;
       search?: string;
       type?: TransactionType;
-      category?: TransactionCategory;
+      category?: string;
       startDate?: Date;
       endDate?: Date;
     }
@@ -123,7 +135,7 @@ export class TransactionsService {
     userId: string,
     data: {
       type: TransactionType;
-      category: TransactionCategory;
+      category: string;
       amount: number;
       description: string;
       date: Date;
@@ -170,7 +182,7 @@ export class TransactionsService {
     userRole: string,
     data: {
       type?: TransactionType;
-      category?: TransactionCategory;
+      category?: string;
       amount?: number;
       description?: string;
       date?: Date;
@@ -286,8 +298,8 @@ export class TransactionsService {
       _count: true,
     });
 
-    const totalIncome = income._sum.amount || 0;
-    const totalExpenses = expenses._sum.amount || 0;
+    const totalIncome = this.toNumber(income._sum.amount);
+    const totalExpenses = this.toNumber(expenses._sum.amount);
     const balance = totalIncome - totalExpenses;
 
     return {
@@ -350,10 +362,10 @@ export class TransactionsService {
       },
     });
 
-    return summary.map((item) => ({
+    return summary.map((item: (typeof summary)[number]) => ({
       category: item.category,
       type: item.type,
-      total: item._sum.amount || 0,
+      total: this.toNumber(item._sum.amount),
       count: item._count,
     }));
   }
@@ -390,12 +402,12 @@ export class TransactionsService {
       monthlyData[i] = { income: 0, expenses: 0, balance: 0 };
     }
 
-    transactions.forEach((transaction) => {
+    transactions.forEach((transaction: (typeof transactions)[number]) => {
       const month = transaction.date.getMonth() + 1;
       if (transaction.type === TransactionType.INCOME) {
-        monthlyData[month].income += transaction.amount;
+        monthlyData[month].income += this.toNumber(transaction.amount);
       } else {
-        monthlyData[month].expenses += transaction.amount;
+        monthlyData[month].expenses += this.toNumber(transaction.amount);
       }
     });
 

@@ -26,7 +26,7 @@ export class ProductsController {
    * GET /api/products/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const product = await productsService.getProductById(id, req.user!.id, req.user!.role);
     res.json(product);
   });
@@ -45,7 +45,7 @@ export class ProductsController {
    * PUT /api/products/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const product = await productsService.updateProduct(id, req.user!.id, req.user!.role, req.body);
     res.json(product);
   });
@@ -55,7 +55,7 @@ export class ProductsController {
    * DELETE /api/products/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await productsService.deleteProduct(id, req.user!.id, req.user!.role);
     res.json(result);
   });
@@ -65,7 +65,7 @@ export class ProductsController {
    * PATCH /api/products/:id/stock
    */
   updateStock = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { quantity, operation } = req.body;
     const product = await productsService.updateStock(id, req.user!.id, req.user!.role, {
       quantity,

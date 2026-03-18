@@ -1,44 +1,32 @@
 #!/bin/bash
 
-# Rollback script for MetalGest deployment
-set -e
+set -euo pipefail
 
-echo "=== MetalGest Rollback Script ==="
+DEPLOY_PATH="${DEPLOY_PATH:-/var/www/metalgest}"
+BACKUP_PATH="${BACKUP_PATH:-/var/www/metalgest-backup}"
 
-# Find the most recent backup
-BACKUP_DIR="/var/www/metalgest-backup"
-if [ -d "$BACKUP_DIR" ]; then
-    LATEST_BACKUP=$(ls -t $BACKUP_DIR | head -n 1)
-    if [ -n "$LATEST_BACKUP" ]; then
-        echo "Found latest backup: $LATEST_BACKUP"
-        
-        # Stop current containers
-        echo "Stopping current deployment..."
-        cd /var/www/metalgest
-        docker-compose down || true
-        
-        # Restore from backup
-        echo "Restoring from backup..."
-        cd /var/www
-        rm -rf metalgest-rollback-temp
-        cp -r "$BACKUP_DIR/$LATEST_BACKUP" metalgest-rollback-temp
-        
-        # Swap directories
-        mv metalgest metalgest-failed
-        mv metalgest-rollback-temp metalgest
-        
-        # Start restored version
-        echo "Starting restored deployment..."
-        cd /var/www/metalgest
-        docker-compose up -d
-        
-        echo "✅ Rollback completed successfully!"
-        echo "Failed deployment moved to: /var/www/metalgest-failed"
-    else
-        echo "❌ No backup found in $BACKUP_DIR"
-        exit 1
-    fi
-else
-    echo "❌ Backup directory not found: $BACKUP_DIR"
-    exit 1
+echo "MetalGest rollback"
+
+if [ ! -d "$BACKUP_PATH" ]; then
+  echo "Backup directory not found: $BACKUP_PATH"
+  exit 1
 fi
+
+LATEST_BACKUP="$(find "$BACKUP_PATH" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+
+if [ -z "$LATEST_BACKUP" ]; then
+  echo "No backup available in $BACKUP_PATH"
+  exit 1
+fi
+
+cd "$DEPLOY_PATH"
+docker compose down --remove-orphans || true
+
+rm -rf "${DEPLOY_PATH}.failed"
+mv "$DEPLOY_PATH" "${DEPLOY_PATH}.failed"
+cp -R "$LATEST_BACKUP" "$DEPLOY_PATH"
+
+cd "$DEPLOY_PATH"
+docker compose up -d --build
+
+echo "Rollback completed from $LATEST_BACKUP"

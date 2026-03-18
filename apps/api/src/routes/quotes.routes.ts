@@ -6,6 +6,7 @@ const router = Router();
 
 // Public route - no authentication required
 router.get('/public/:token', quotesController.getPublic);
+router.patch('/public/:token/status', quotesController.updatePublicStatus);
 
 // All other routes require authentication
 router.use(authenticate);

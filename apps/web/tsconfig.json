@@ -17,15 +17,10 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@metalgest/shared": ["../../packages/shared/index.ts"],
-      "@metalgest/database": ["../../packages/database/index.ts"],
-      "@metalgest/server/*": ["../server/src/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "./tsconfig.node.json" }
-  ]
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

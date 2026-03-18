@@ -19,7 +19,7 @@ declare global {
 // Verify JWT token
 export const authenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -80,7 +80,7 @@ export const authenticate = async (
 
 // Check user role
 export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError(401, 'Unauthorized', 'UNAUTHORIZED'));
     }
@@ -103,7 +103,7 @@ export const authorize = (...roles: string[]) => {
 // Optional authentication (doesn't fail if no token)
 export const optionalAuthenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;

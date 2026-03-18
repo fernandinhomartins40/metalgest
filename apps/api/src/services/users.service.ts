@@ -303,13 +303,13 @@ export class UsersService {
         total: transactionStats._count,
         totalAmount: transactionStats._sum.amount || 0,
       },
-      quotes: quotesStats.reduce((acc, stat) => {
+      quotes: quotesStats.reduce<Record<string, { count: number; totalValue: unknown }>>((acc, stat) => {
         acc[stat.status] = {
           count: stat._count,
           totalValue: stat._sum.totalValue || 0,
         };
         return acc;
-      }, {} as any),
+      }, {}),
     };
   }
 }

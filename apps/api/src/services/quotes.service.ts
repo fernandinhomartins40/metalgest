@@ -4,6 +4,18 @@ import { QuoteStatus } from '@prisma/client';
 import crypto from 'crypto';
 
 export class QuotesService {
+  private toNumber(value: { toNumber(): number } | number | null | undefined) {
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    if (value && typeof value === 'object' && 'toNumber' in value) {
+      return value.toNumber();
+    }
+
+    return 0;
+  }
+
   /**
    * Generate unique quote number
    */
@@ -200,6 +212,48 @@ export class QuotesService {
   }
 
   /**
+   * Update quote status through public link
+   */
+  async updateQuoteStatusByPublicToken(token: string, status: QuoteStatus) {
+    if (status !== QuoteStatus.APPROVED && status !== QuoteStatus.REJECTED) {
+      throw new AppError(400, 'Invalid public quote status', 'INVALID_STATUS');
+    }
+
+    const quote = await prisma.quote.findFirst({
+      where: {
+        publicToken: token,
+        publicLinkEnabled: true,
+      },
+    });
+
+    if (!quote) {
+      throw new AppError(404, 'Quote not found or link is disabled', 'QUOTE_NOT_FOUND');
+    }
+
+    return prisma.quote.update({
+      where: { id: quote.id },
+      data: { status },
+      include: {
+        client: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        items: {
+          include: {
+            product: true,
+            service: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
+  /**
    * Create new quote
    */
   async createQuote(
@@ -329,13 +383,14 @@ export class QuotesService {
 
     // If items are being updated, delete old items and create new ones
     let itemsUpdate = {};
-    let subtotal = existingQuote.subtotal;
-    let totalValue = existingQuote.totalValue;
+    let subtotal = this.toNumber(existingQuote.subtotal);
+    let totalValue = this.toNumber(existingQuote.totalValue);
 
     if (data.items && data.items.length > 0) {
       subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-      const discountAmount = data.discount !== undefined ? data.discount : existingQuote.discount;
-      const taxAmount = data.tax !== undefined ? data.tax : existingQuote.tax;
+      const discountAmount =
+        data.discount !== undefined ? data.discount : this.toNumber(existingQuote.discount);
+      const taxAmount = data.tax !== undefined ? data.tax : this.toNumber(existingQuote.tax);
       totalValue = subtotal - discountAmount + taxAmount;
 
       itemsUpdate = {
@@ -351,8 +406,9 @@ export class QuotesService {
       };
     } else if (data.discount !== undefined || data.tax !== undefined) {
       // Recalculate total if discount or tax changed
-      const discountAmount = data.discount !== undefined ? data.discount : existingQuote.discount;
-      const taxAmount = data.tax !== undefined ? data.tax : existingQuote.tax;
+      const discountAmount =
+        data.discount !== undefined ? data.discount : this.toNumber(existingQuote.discount);
+      const taxAmount = data.tax !== undefined ? data.tax : this.toNumber(existingQuote.tax);
       totalValue = subtotal - discountAmount + taxAmount;
     }
 
@@ -530,7 +586,7 @@ export class QuotesService {
         publicToken: this.generatePublicToken(),
         publicLinkEnabled: false,
         items: {
-          create: originalQuote.items.map((item) => ({
+          create: originalQuote.items.map((item: (typeof originalQuote.items)[number]) => ({
             productId: item.productId,
             serviceId: item.serviceId,
             description: item.description,

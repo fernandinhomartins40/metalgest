@@ -1,12 +1,18 @@
 # dependencies
-/node_modules
+**/node_modules
 
 # build output
-/dist
+**/dist
+**/.turbo
+**/*.tsbuildinfo
 
 # local env files
 .env
 .env.*.local
+
+# runtime artifacts
+apps/api/logs
+apps/api/uploads
 
 # IDEs e editores
 .vscode

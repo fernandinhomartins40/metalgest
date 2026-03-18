@@ -1,11 +1,7 @@
-
-import { storage } from "../utils/storage.js"
-
 const ROLES = {
-  ADMIN: "admin",
-  FINANCEIRO: "financeiro",
-  COMERCIAL: "comercial",
-  PRODUCAO: "producao"
+  ADMIN: "ADMIN",
+  MANAGER: "MANAGER",
+  USER: "USER",
 }
 
 const MODULES = {
@@ -14,62 +10,51 @@ const MODULES = {
   QUOTES: "quotes",
   PRODUCTION: "production",
   PRODUCTS: "products",
+  SERVICES: "services",
   FINANCIAL: "financial",
   DRE: "dre",
   USERS: "users",
-  SETTINGS: "settings"
+  SETTINGS: "settings",
 }
 
 const roleAccess = {
-  [ROLES.ADMIN]: [
+  [ROLES.ADMIN]: Object.values(MODULES),
+  [ROLES.MANAGER]: [
     MODULES.DASHBOARD,
     MODULES.CLIENTS,
     MODULES.QUOTES,
     MODULES.PRODUCTION,
     MODULES.PRODUCTS,
+    MODULES.SERVICES,
     MODULES.FINANCIAL,
     MODULES.DRE,
-    MODULES.USERS,
-    MODULES.SETTINGS
+    MODULES.SETTINGS,
   ],
-  [ROLES.FINANCEIRO]: [
-    MODULES.DASHBOARD,
-    MODULES.FINANCIAL,
-    MODULES.DRE
-  ],
-  [ROLES.COMERCIAL]: [
+  [ROLES.USER]: [
     MODULES.DASHBOARD,
     MODULES.CLIENTS,
-    MODULES.QUOTES
-  ],
-  [ROLES.PRODUCAO]: [
-    MODULES.DASHBOARD,
+    MODULES.QUOTES,
     MODULES.PRODUCTION,
-    MODULES.PRODUCTS
-  ]
+    MODULES.PRODUCTS,
+    MODULES.SERVICES,
+    MODULES.FINANCIAL,
+    MODULES.SETTINGS,
+  ],
 }
 
 export const permissions = {
-  hasAccess: (module) => {
-    const user = storage.get("user")
-    if (!user || !user.role) return false
-    
+  hasAccess: (module, user) => {
+    if (!user?.role) return false
     if (user.role === ROLES.ADMIN) return true
-    
     return roleAccess[user.role]?.includes(module) || false
   },
 
-  getAccessibleModules: () => {
-    const user = storage.get("user")
-    if (!user || !user.role) return []
-    
-    if (user.role === ROLES.ADMIN) {
-      return Object.values(MODULES)
-    }
-    
-    return roleAccess[user.role] || []
+  getAccessibleModules: (user) => {
+    if (!user?.role) return []
+    if (user.role === ROLES.ADMIN) return Object.values(MODULES)
+    return roleAccess[user.role] || roleAccess[ROLES.USER]
   },
 
   ROLES,
-  MODULES
+  MODULES,
 }

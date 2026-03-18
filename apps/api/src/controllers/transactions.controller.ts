@@ -28,7 +28,7 @@ export class TransactionsController {
    * GET /api/transactions/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const transaction = await transactionsService.getTransactionById(
       id,
       req.user!.id,
@@ -51,7 +51,7 @@ export class TransactionsController {
    * PUT /api/transactions/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const transaction = await transactionsService.updateTransaction(
       id,
       req.user!.id,
@@ -66,7 +66,7 @@ export class TransactionsController {
    * DELETE /api/transactions/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await transactionsService.deleteTransaction(id, req.user!.id, req.user!.role);
     res.json(result);
   });

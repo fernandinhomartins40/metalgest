@@ -317,8 +317,8 @@ export class ServicesService {
     });
 
     const categories = services
-      .map((s) => s.category)
-      .filter((c): c is string => c !== null)
+      .map((service: { category: string | null }) => service.category)
+      .filter((category): category is string => category !== null)
       .sort();
 
     return categories;

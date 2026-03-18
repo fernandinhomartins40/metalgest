@@ -1,14 +1,12 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import path from "path"
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@metalgest/shared": path.resolve(__dirname, "../../packages/shared"),
-      "@metalgest/database": path.resolve(__dirname, "../../packages/database"),
     },
   },
   server: {
@@ -21,7 +19,4 @@ export default defineConfig({
       },
     },
   },
-  optimizeDeps: {
-    exclude: ["@metalgest/shared", "@metalgest/database"],
-  },
-});
+})

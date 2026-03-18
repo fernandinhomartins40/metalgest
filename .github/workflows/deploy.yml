@@ -1,187 +1,139 @@
-name: Deploy MetalGest - Node.js + SQLite - VPS 72.60.10.112
+name: MetalGest CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metalgest-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Deploy Completo
+  validate:
+    name: Validate Monorepo
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - name: Preparar arquivos para deploy
-        run: |
-          # Apenas verificar estrutura - build será feito no Docker
-          echo "📁 Verificando estrutura do projeto:"
-          ls -la
-          echo "✅ Frontend source:"
-          ls -la apps/web/
-          echo "✅ Backend source:"
-          ls -la backend/
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Generate Prisma client
+        run: npx prisma generate --schema packages/database/prisma/schema.prisma
 
-      - name: Deploy to VPS
-        env:
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          # Configurar variáveis
-          VPS_HOST="72.60.10.112"
-          VPS_USER="root"
-          DEPLOY_PATH="/var/www/metalgest"
-          
-          echo "🚀 Iniciando deploy para VPS ${VPS_HOST}:3010"
-          
-          # Função para executar comandos SSH
-          ssh_exec() {
-            sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=60 -o ServerAliveCountMax=10 "$VPS_USER@$VPS_HOST" "$1"
-          }
-          
-          # Função para copiar arquivos
-          scp_copy() {
-            sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -r "$1" "$VPS_USER@$VPS_HOST:$2"
-          }
-          
-          # 1. Preparar diretórios na VPS
-          echo "📁 Preparando diretórios na VPS..."
-          if ! ssh_exec "mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && rm -rf * .* 2>/dev/null || true && mkdir -p frontend backend nginx"; then
-            echo "❌ Erro ao preparar diretórios"
-            exit 1
-          fi
-          echo "✅ Diretórios preparados"
-          
-          # 2. Copiar todos os arquivos de uma vez
-          echo "📦 Criando pacote para deploy..."
-          tar -czf deploy.tar.gz \
-            docker-compose.yml \
-            Dockerfile.frontend \
-            Dockerfile.backend \
-            nginx/ \
-            apps/ \
-            backend/ \
-            package.json \
-            package-lock.json 2>/dev/null || tar -czf deploy.tar.gz \
-            docker-compose.yml \
-            Dockerfile.frontend \
-            Dockerfile.backend \
-            nginx/ \
-            apps/ \
-            backend/ \
-            package.json
-          
-          echo "📦 Enviando pacote para VPS..."
-          if ! scp_copy "deploy.tar.gz" "$DEPLOY_PATH/"; then
-            echo "❌ Erro ao enviar pacote"
-            exit 1
-          fi
-          
-          echo "📦 Extraindo pacote na VPS..."
-          ssh_exec "cd $DEPLOY_PATH && tar -xzf deploy.tar.gz && rm deploy.tar.gz"
-          
-          echo "✅ Arquivos copiados com sucesso"
-          
-          # 3. Instalar Docker e Docker Compose na VPS (se necessário)
-          echo "📦 Verificando Docker na VPS..."
-          ssh_exec "
-            if ! command -v docker &> /dev/null; then
-              echo '📥 Instalando Docker...'
-              apt-get update -y
-              apt-get install -y ca-certificates curl gnupg lsb-release
-              mkdir -p /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-              apt-get update -y
-              apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-              systemctl enable docker
-              systemctl start docker
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build
+        run: npm run build
+
+      - name: API tests
+        run: npm run test:api
+
+  smoke-docker:
+    name: Smoke Test Docker Stack
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build and start containers
+        run: docker compose up -d --build
+
+      - name: Smoke test stack
+        run: npm run smoke:docker
+
+      - name: Print logs on failure
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: smoke-docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.VPS_HOST != '' && secrets.VPS_USER != '' && secrets.VPS_PATH != '' && secrets.VPS_SSH_KEY != ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare remote directory
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            mkdir -p ${{ secrets.VPS_PATH }}
+            cd ${{ secrets.VPS_PATH }}
+            if [ "$(find . -mindepth 1 -maxdepth 1 ! -name '.env' | wc -l)" -gt 0 ]; then
+              mkdir -p "${{ secrets.VPS_PATH }}-backup"
+              TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+              BACKUP_TARGET="${{ secrets.VPS_PATH }}-backup/${TIMESTAMP}"
+              mkdir -p "$BACKUP_TARGET"
+              find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec cp -R {} "$BACKUP_TARGET" \;
             fi
-            
-            if ! command -v docker-compose &> /dev/null; then
-              echo '📥 Instalando Docker Compose...'
-              curl -L \"https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
-              chmod +x /usr/local/bin/docker-compose
+            docker compose down --remove-orphans || true
+            find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
+
+      - name: Sync repository to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "apps,docker,packages,scripts,entrypoint.sh,rollback.sh,package.json,package-lock.json,docker-compose.yml,.env.example,turbo.json,tsconfig.base.json"
+          target: ${{ secrets.VPS_PATH }}
+
+      - name: Run deploy commands
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ${{ secrets.VPS_PATH }}
+            if [ ! -f .env ]; then
+              cp .env.example .env
             fi
-            
-            echo '✅ Ferramentas instaladas:'
-            docker --version
-            docker-compose --version
-          "
-          
-          # 4. Preparar ambiente
-          echo "📝 Criando arquivos de ambiente..."
-          ssh_exec "cd $DEPLOY_PATH && cat > .env << 'EOF'
-          NODE_ENV=production
-          JWT_SECRET=metalgest-jwt-secret-production-$(date +%s)
-          REFRESH_TOKEN_SECRET=metalgest-refresh-secret-production-$(date +%s)
-          FRONTEND_URL=http://72.60.10.112:3010
-          VITE_API_URL=http://72.60.10.112:3010/api
-          EOF"
-          
-          # 5. Parar containers existentes
-          echo "🛑 Parando containers existentes..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose down --remove-orphans 2>/dev/null || true"
-          
-          # 6. Fazer backup
-          echo "💾 Criando backup..."
-          ssh_exec "
-            TIMESTAMP=\$(date +\"%Y%m%d_%H%M%S\")
-            mkdir -p /var/www/metalgest-backup
-            if [ -d \"/var/www/metalgest-backup/deploy-current\" ]; then
-              mv /var/www/metalgest-backup/deploy-current /var/www/metalgest-backup/deploy-\$TIMESTAMP
-            fi
-            cp -r $DEPLOY_PATH /var/www/metalgest-backup/deploy-current
-          "
-          
-          # 7. Build containers com cache
-          echo "🔧 Construindo containers..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose build"
-          
-          # 8. Iniciar containers
-          echo "🚀 Iniciando containers..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose up -d"
-          
-          # 9. Aguardar containers (tempo reduzido)
-          echo "⏳ Aguardando containers..."
-          ssh_exec "
-            for i in {1..30}; do
-              if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
-                echo \"✅ Aplicação pronta após \$i tentativas\"
-                break
+            chmod +x entrypoint.sh rollback.sh || true
+            docker compose up -d --build
+
+            for attempt in $(seq 1 40); do
+              if curl -fsS http://localhost:${APP_PORT:-80}/api/health > /dev/null; then
+                echo "Health check passed on attempt ${attempt}"
+                exit 0
               fi
-              echo \"Tentativa \$i/30...\"
+
+              echo "Waiting for application to become healthy (${attempt}/40)"
               sleep 3
             done
-          "
-          
-          # 10. Verificar status
-          echo "📋 Verificando status dos containers..."
-          ssh_exec "cd $DEPLOY_PATH && docker-compose ps"
-          
-          # 11. Teste final
-          echo "🧪 Testando aplicação..."
-          ssh_exec "
-            if curl -s -f http://localhost:3010/api/health >/dev/null 2>&1; then
-              echo \"✅ Aplicação funcionando em http://72.60.10.112:3010\"
-              echo \"✅ API health check: OK\"
-              echo \"🎉 DEPLOY CONCLUÍDO COM SUCESSO!\"
-              echo \"🌐 Aplicação disponível em: http://72.60.10.112:3010\"
-              echo \"📊 Health check: http://72.60.10.112:3010/api/health\"
-            else
-              echo \"❌ Falha no health check\"
-              docker-compose logs --tail=20
-              exit 1
-            fi
-          "
-          
-          echo "✅ Deploy finalizado com sucesso!"
+
+            echo "Deployment failed health check"
+            docker compose logs --tail=200
+            exit 1

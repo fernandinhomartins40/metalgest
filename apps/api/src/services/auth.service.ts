@@ -8,17 +8,19 @@ export class AuthService {
   private generateTokens(userId: string, email: string, role: string) {
     const jwtSecret = process.env.JWT_SECRET!;
     const refreshSecret = process.env.REFRESH_TOKEN_SECRET!;
+    const accessExpiresIn = (process.env.JWT_EXPIRES_IN || '24h') as jwt.SignOptions['expiresIn'];
+    const refreshExpiresIn = (process.env.REFRESH_TOKEN_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'];
 
     const accessToken = jwt.sign(
       { sub: userId, email, role },
-      jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      jwtSecret as jwt.Secret,
+      { expiresIn: accessExpiresIn }
     );
 
     const refreshToken = jwt.sign(
       { sub: userId },
-      refreshSecret,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
+      refreshSecret as jwt.Secret,
+      { expiresIn: refreshExpiresIn }
     );
 
     return { accessToken, refreshToken };
@@ -140,6 +142,10 @@ export class AuthService {
 
   // Refresh token
   async refresh(refreshTokenValue: string) {
+    if (!refreshTokenValue) {
+      throw new AppError(401, 'Refresh token is required', 'INVALID_TOKEN');
+    }
+
     // Find refresh token
     const storedToken = await prisma.refreshToken.findUnique({
       where: { token: refreshTokenValue },
@@ -185,6 +191,10 @@ export class AuthService {
 
   // Logout
   async logout(refreshTokenValue: string) {
+    if (!refreshTokenValue) {
+      return;
+    }
+
     await prisma.refreshToken.deleteMany({
       where: { token: refreshTokenValue },
     });

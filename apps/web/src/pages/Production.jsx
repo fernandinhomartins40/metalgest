@@ -1,355 +1,296 @@
-
-import React from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { format } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import React, { useEffect, useMemo, useState } from "react"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Loading } from "../components/ui/loading"
 import { useToast } from "../components/ui/use-toast"
-import { FileText, Tag, AlertCircle } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts"
+import { api } from "../services/api"
+import { formatDate, orderStatusLabel, statusTone, toDateInputValue } from "../lib/formatters"
 
-const serviceOrderSchema = z.object({
-  quoteId: z.string().min(1, "Orçamento é obrigatório"),
-  clientId: z.string().min(1, "Cliente é obrigatório"),
-  responsibleId: z.string().min(1, "Responsável é obrigatório"),
-  status: z.enum(["waiting", "in_progress", "paused", "finished", "delivered"]),
-  deadline: z.string().min(1, "Data de entrega é obrigatória"),
-  notes: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-})
-
-// Mock data - substituir por dados reais
-const mockUsers = [
-  { id: "1", name: "João Silva" },
-  { id: "2", name: "Maria Santos" },
-]
-
-const mockQuotes = [
-  { 
-    id: "1", 
-    clientName: "Cliente A",
-    items: [
-      { description: "Produto 1", quantity: 2, price: 100 },
-      { description: "Serviço 1", quantity: 1, price: 150 }
-    ]
-  },
-]
-
-const mockServiceOrders = [
-  {
-    id: "1",
-    clientName: "Cliente A",
-    responsibleName: "João Silva",
-    status: "in_progress",
-    deadline: "2025-04-30",
-    items: [
-      { description: "Produto 1", quantity: 2 }
-    ]
-  },
-]
-
-const mockPerformanceData = [
-  { month: "Jan", completed: 12 },
-  { month: "Fev", completed: 19 },
-  { month: "Mar", completed: 15 },
-  { month: "Abr", completed: 22 },
-]
+const initialForm = {
+  clientId: "",
+  quoteId: "",
+  description: "",
+  priority: "MEDIUM",
+  startDate: toDateInputValue(),
+  estimatedEndDate: toDateInputValue(),
+  notes: "",
+}
 
 function Production() {
   const { toast } = useToast()
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
-    resolver: zodResolver(serviceOrderSchema),
-    defaultValues: {
-      status: "waiting",
-      tags: [],
-      createdAt: format(new Date(), "yyyy-MM-dd"),
-    }
-  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [orders, setOrders] = useState([])
+  const [clients, setClients] = useState([])
+  const [quotes, setQuotes] = useState([])
+  const [form, setForm] = useState(initialForm)
 
-  const onSubmit = (data) => {
-    console.log(data)
-    toast({
-      title: "Ordem de serviço criada com sucesso!",
-      description: "A OS foi registrada e os responsáveis foram notificados.",
-    })
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [ordersResult, clientsResult, quotesResult] = await Promise.all([
+        api.serviceOrders.list(),
+        api.clients.list(),
+        api.quotes.list(),
+      ])
+
+      setOrders(ordersResult)
+      setClients(clientsResult)
+      setQuotes(quotesResult.filter((quote) => quote.status === "APPROVED"))
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao carregar produção",
+        description: error.message,
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const getStatusColor = (status) => {
-    const colors = {
-      waiting: "bg-yellow-100 text-yellow-800",
-      in_progress: "bg-blue-100 text-blue-800",
-      paused: "bg-orange-100 text-orange-800",
-      finished: "bg-green-100 text-green-800",
-      delivered: "bg-purple-100 text-purple-800",
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const counters = useMemo(() => {
+    return {
+      total: orders.length,
+      pending: orders.filter((order) => order.status === "PENDING").length,
+      inProgress: orders.filter((order) => order.status === "IN_PROGRESS").length,
+      completed: orders.filter((order) => order.status === "COMPLETED").length,
+      cancelled: orders.filter((order) => order.status === "CANCELLED").length,
     }
-    return colors[status] || "bg-gray-100 text-gray-800"
+  }, [orders])
+
+  const availableQuotes = useMemo(() => {
+    if (!form.clientId) return quotes
+    return quotes.filter((quote) => quote.clientId === form.clientId)
+  }, [quotes, form.clientId])
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
   }
 
-  const getStatusText = (status) => {
-    const texts = {
-      waiting: "Em Espera",
-      in_progress: "Em Produção",
-      paused: "Pausada",
-      finished: "Finalizada",
-      delivered: "Entregue",
+  const resetForm = () => {
+    setForm(initialForm)
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+
+    try {
+      await api.serviceOrders.create({
+        clientId: form.clientId,
+        quoteId: form.quoteId || undefined,
+        description: form.description,
+        priority: form.priority,
+        startDate: form.startDate || undefined,
+        estimatedEndDate: form.estimatedEndDate || undefined,
+        notes: form.notes || undefined,
+      })
+
+      toast({
+        title: "Ordem criada",
+        description: "A ordem de serviço foi registrada.",
+      })
+
+      resetForm()
+      await loadData()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao criar ordem",
+        description: error.message,
+      })
+    } finally {
+      setSaving(false)
     }
-    return texts[status] || status
+  }
+
+  const handleStatusChange = async (order, status) => {
+    try {
+      await api.serviceOrders.updateStatus(order.id, status)
+      await loadData()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao alterar status",
+        description: error.message,
+      })
+    }
+  }
+
+  const handleDelete = async (order) => {
+    if (!window.confirm(`Excluir ${order.orderNumber}?`)) return
+
+    try {
+      await api.serviceOrders.delete(order.id)
+      toast({
+        title: "Ordem removida",
+        description: `${order.orderNumber} foi excluída.`,
+      })
+      await loadData()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao excluir ordem",
+        description: error.message,
+      })
+    }
+  }
+
+  if (loading) {
+    return <Loading />
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Produção</h2>
-        <p className="text-muted-foreground">Gerencie suas ordens de serviço</p>
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Produção</h2>
+        <p className="mt-2 text-slate-600">Ordens de serviço originadas do fluxo comercial aprovado.</p>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="new">Nova OS</TabsTrigger>
-          <TabsTrigger value="list">Lista de OS</TabsTrigger>
-        </TabsList>
-
-        {/* Dashboard */}
-        <TabsContent value="dashboard">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Total de OS</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">24</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Em Produção</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-blue-600">8</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Finalizadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-green-600">12</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Atrasadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-red-600">4</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Desempenho da Produção</CardTitle>
-                <CardDescription>OS finalizadas por mês</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={mockPerformanceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="completed" fill="#4F46E5" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Nova OS */}
-        <TabsContent value="new">
-          <Card>
-            <CardHeader>
-              <CardTitle>Nova Ordem de Serviço</CardTitle>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {[
+          ["Total", counters.total],
+          ["Pendentes", counters.pending],
+          ["Em produção", counters.inProgress],
+          ["Concluídas", counters.completed],
+          ["Canceladas", counters.cancelled],
+        ].map(([label, value]) => (
+          <Card key={label}>
+            <CardHeader className="pb-3">
+              <CardDescription>{label}</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Orçamento *</label>
-                    <select
-                      {...register("quoteId")}
-                      className="w-full rounded-md border p-2"
-                    >
-                      <option value="">Selecione um orçamento</option>
-                      {mockQuotes.map(quote => (
-                        <option key={quote.id} value={quote.id}>
-                          {quote.clientName}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.quoteId && (
-                      <span className="text-sm text-red-500">{errors.quoteId.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Responsável *</label>
-                    <select
-                      {...register("responsibleId")}
-                      className="w-full rounded-md border p-2"
-                    >
-                      <option value="">Selecione um responsável</option>
-                      {mockUsers.map(user => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.responsibleId && (
-                      <span className="text-sm text-red-500">{errors.responsibleId.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <select
-                      {...register("status")}
-                      className="w-full rounded-md border p-2"
-                    >
-                      <option value="waiting">Em Espera</option>
-                      <option value="in_progress">Em Produção</option>
-                      <option value="paused">Pausada</option>
-                      <option value="finished">Finalizada</option>
-                      <option value="delivered">Entregue</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Prazo de Entrega *</label>
-                    <input
-                      type="date"
-                      {...register("deadline")}
-                      className="w-full rounded-md border p-2"
-                    />
-                    {errors.deadline && (
-                      <span className="text-sm text-red-500">{errors.deadline.message}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Observações</label>
-                  <textarea
-                    {...register("notes")}
-                    className="w-full rounded-md border p-2"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentTags = watch("tags") || []
-                      setValue("tags", [...currentTags, "urgente"])
-                    }}
-                  >
-                    <Tag className="h-4 w-4 mr-2" />
-                    Urgente
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentTags = watch("tags") || []
-                      setValue("tags", [...currentTags, "pendente"])
-                    }}
-                  >
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Pendente
-                  </Button>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <Button type="button" variant="outline">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Gerar PDF
-                  </Button>
-                  <Button type="submit">
-                    Criar Ordem de Serviço
-                  </Button>
-                </div>
-              </form>
+              <p className="text-2xl font-semibold text-slate-900">{value}</p>
             </CardContent>
           </Card>
-        </TabsContent>
+        ))}
+      </section>
 
-        {/* Lista de OS */}
-        <TabsContent value="list">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ordens de Serviço</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockServiceOrders.map(order => (
-                  <div
-                    key={order.id}
-                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{order.clientName}</h3>
-                        <p className="text-sm text-gray-500">
-                          Responsável: {order.responsibleName}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(order.status)}`}>
-                          {getStatusText(order.status)}
-                        </span>
-                        <p className="text-sm text-gray-500">
-                          Entrega: {format(new Date(order.deadline), "dd/MM/yyyy")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium mb-2">Itens:</h4>
-                      <ul className="text-sm text-gray-600">
-                        {order.items.map((item, index) => (
-                          <li key={index}>
-                            {item.description} - Qtd: {item.quantity}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+      <div className="grid gap-6 xl:grid-cols-[420px,1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Nova ordem de serviço</CardTitle>
+            <CardDescription>Crie uma OS vinculada a cliente e, opcionalmente, a um orçamento aprovado.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <select name="clientId" value={form.clientId} onChange={handleChange} className="w-full rounded-md border px-3 py-2" required>
+                <option value="">Selecione o cliente</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
                 ))}
+              </select>
+
+              <select name="quoteId" value={form.quoteId} onChange={handleChange} className="w-full rounded-md border px-3 py-2">
+                <option value="">Sem orçamento vinculado</option>
+                {availableQuotes.map((quote) => (
+                  <option key={quote.id} value={quote.id}>
+                    {quote.quoteNumber}
+                  </option>
+                ))}
+              </select>
+
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Descrição operacional"
+                rows={4}
+                className="w-full rounded-md border px-3 py-2"
+                required
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <select name="priority" value={form.priority} onChange={handleChange} className="rounded-md border px-3 py-2">
+                  <option value="LOW">Baixa</option>
+                  <option value="MEDIUM">Média</option>
+                  <option value="HIGH">Alta</option>
+                  <option value="URGENT">Urgente</option>
+                </select>
+                <input name="startDate" type="date" value={form.startDate} onChange={handleChange} className="rounded-md border px-3 py-2" />
+                <input name="estimatedEndDate" type="date" value={form.estimatedEndDate} onChange={handleChange} className="rounded-md border px-3 py-2 md:col-span-2" />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                placeholder="Observações internas"
+                rows={3}
+                className="w-full rounded-md border px-3 py-2"
+              />
+
+              <Button type="submit" className="w-full gap-2" disabled={saving}>
+                <Plus className="h-4 w-4" />
+                {saving ? "Criando..." : "Criar ordem"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ordens em andamento</CardTitle>
+            <CardDescription>{orders.length} ordem(ns) registradas no backend.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {orders.map((order) => (
+              <div key={order.id} className="rounded-lg border p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900">{order.orderNumber}</p>
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusTone(order.status)}`}>
+                        {orderStatusLabel(order.status)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">{order.client?.name}</p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+                      <span>Prioridade: {order.priority}</span>
+                      <span>Início: {order.startDate ? formatDate(order.startDate) : "Não definido"}</span>
+                      <span>Fim previsto: {order.estimatedEndDate ? formatDate(order.estimatedEndDate) : "Não definido"}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      value={order.status}
+                      onChange={(event) => handleStatusChange(order, event.target.value)}
+                      className="rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="PENDING">Pendente</option>
+                      <option value="IN_PROGRESS">Em produção</option>
+                      <option value="COMPLETED">Concluída</option>
+                      <option value="CANCELLED">Cancelada</option>
+                    </select>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(order)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {orders.length === 0 ? (
+              <p className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
+                Nenhuma ordem de serviço cadastrada ainda.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -1,376 +1,296 @@
-
-import React, { useEffect } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { format } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import React, { useEffect, useMemo, useState } from "react"
+import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react"
 import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Loading } from "../components/ui/loading"
 import { useToast } from "../components/ui/use-toast"
-import { ConfirmDialog } from "../components/ui/confirm-dialog"
-import { useApi } from "../hooks/useApi"
 import { api } from "../services/api"
-import { permissions } from "../lib/permissions"
-import {
-  UserPlus,
-  Users as UsersIcon,
-  Search,
-  Filter,
-  Download,
-  Edit,
-  Trash2,
-  Eye,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Activity,
-  Clock,
-  BarChart2,
-  Lock
-} from "lucide-react"
+import { formatDate, userRoleLabel } from "../lib/formatters"
 
-const userSchema = z.object({
-  name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
-  email: z.string().email("E-mail inválido"),
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-  confirmPassword: z.string(),
-  role: z.enum(["admin", "financeiro", "comercial", "producao"], {
-    required_error: "Selecione um cargo"
-  })
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Senhas não conferem",
-  path: ["confirmPassword"],
-})
+const initialForm = {
+  name: "",
+  email: "",
+  password: "",
+  role: "USER",
+  active: true,
+}
 
 function Users() {
   const { toast } = useToast()
-  const [users, setUsers] = React.useState([])
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState("all")
-  const [selectedUser, setSelectedUser] = React.useState(null)
-  const [showActivityLog, setShowActivityLog] = React.useState(false)
-  const [confirmDialog, setConfirmDialog] = React.useState({
-    open: false,
-    title: "",
-    description: "",
-    action: null
-  })
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState("")
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState(initialForm)
 
-  const { execute: listUsers, loading: loadingUsers } = useApi(api.users.list)
-  const { execute: createUser, loading: creatingUser } = useApi(api.users.create)
-  const { execute: updateUser, loading: updatingUser } = useApi(api.users.update)
-  const { execute: toggleUserStatus, loading: togglingStatus } = useApi(api.users.toggleStatus)
-  const { execute: resetPassword, loading: resettingPassword } = useApi(api.users.resetPassword)
-
-  const form = useForm({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      role: "producao"
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      const data = await api.users.list()
+      setUsers(data)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao carregar usuários",
+        description: error.message,
+      })
+    } finally {
+      setLoading(false)
     }
-  })
+  }
 
   useEffect(() => {
     loadUsers()
   }, [])
 
-  const loadUsers = async () => {
-    try {
-      const data = await listUsers()
-      setUsers(data)
-    } catch (error) {
-      console.error("Error loading users:", error)
-    }
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) =>
+      [user.name, user.email, user.role]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(search.toLowerCase()))
+    )
+  }, [users, search])
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
+    setForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }))
   }
 
-  const onSubmit = async (data) => {
-    try {
-      await createUser(data)
-      toast({
-        title: "Usuário cadastrado com sucesso!",
-        description: `${data.name} foi adicionado como ${data.role}.`
-      })
-      form.reset()
-      loadUsers()
-    } catch (error) {
-      console.error("Error creating user:", error)
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar usuário",
-        description: error.message
-      })
-    }
+  const resetForm = () => {
+    setForm(initialForm)
+    setEditingId(null)
   }
 
-  const handleStatusChange = async (user) => {
-    const newStatus = !user.active
-    setConfirmDialog({
-      open: true,
-      title: `${newStatus ? "Ativar" : "Desativar"} usuário`,
-      description: `Tem certeza que deseja ${newStatus ? "ativar" : "desativar"} o usuário ${user.name}?`,
-      action: async () => {
-        try {
-          await toggleUserStatus(user.id, newStatus)
-          toast({
-            title: `Usuário ${newStatus ? "ativado" : "desativado"}`,
-            description: "O status do usuário foi alterado com sucesso."
-          })
-          loadUsers()
-        } catch (error) {
-          console.error("Error toggling user status:", error)
-          toast({
-            variant: "destructive",
-            title: "Erro ao alterar status",
-            description: error.message
-          })
-        }
-      }
+  const handleEdit = (user) => {
+    setEditingId(user.id)
+    setForm({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role,
+      active: user.active,
     })
   }
 
-  const handlePasswordReset = async (email) => {
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+
     try {
-      await resetPassword(email)
+      if (editingId) {
+        await api.users.update(editingId, {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+          active: form.active,
+        })
+      } else {
+        await api.users.create({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: form.role,
+          active: form.active,
+        })
+      }
+
       toast({
-        title: "Link de recuperação enviado",
-        description: `Um e-mail foi enviado para ${email} com as instruções.`
+        title: editingId ? "Usuário atualizado" : "Usuário criado",
+        description: `${form.name} foi salvo com sucesso.`,
       })
+
+      resetForm()
+      await loadUsers()
     } catch (error) {
-      console.error("Error resetting password:", error)
       toast({
         variant: "destructive",
-        title: "Erro ao resetar senha",
-        description: error.message
+        title: "Falha ao salvar usuário",
+        description: error.message,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleToggleStatus = async (user) => {
+    try {
+      await api.users.toggleStatus(user.id, !user.active)
+      toast({
+        title: "Status atualizado",
+        description: `${user.name} foi ${user.active ? "desativado" : "ativado"}.`,
+      })
+      await loadUsers()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao alterar status",
+        description: error.message,
       })
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "active" && user.active) ||
-      (statusFilter === "inactive" && !user.active)
+  const handleResetPassword = async (user) => {
+    const newPassword = window.prompt(`Nova senha para ${user.name}:`)
+    if (!newPassword) return
 
-    return matchesSearch && matchesStatus
-  })
+    try {
+      await api.users.resetPassword(user.id, newPassword)
+      toast({
+        title: "Senha redefinida",
+        description: `A senha de ${user.name} foi atualizada.`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao redefinir senha",
+        description: error.message,
+      })
+    }
+  }
+
+  const handleDelete = async (user) => {
+    if (!window.confirm(`Excluir ${user.name}?`)) return
+
+    try {
+      await api.users.delete(user.id)
+      toast({
+        title: "Usuário removido",
+        description: `${user.name} foi excluído da base.`,
+      })
+      await loadUsers()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao excluir usuário",
+        description: error.message,
+      })
+    }
+  }
+
+  if (loading) {
+    return <Loading />
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Usuários</h2>
-        <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Usuários</h2>
+        <p className="mt-2 text-slate-600">Gestão de acesso administrativo da instalação.</p>
       </div>
 
-      <Tabs defaultValue="list" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="list">Lista de Usuários</TabsTrigger>
-          <TabsTrigger value="new">Novo Usuário</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-6 xl:grid-cols-[420px,1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingId ? "Editar usuário" : "Novo usuário"}</CardTitle>
+            <CardDescription>Perfis internos com autenticação própria do backend.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <input name="name" value={form.name} onChange={handleChange} placeholder="Nome completo" className="w-full rounded-md border px-3 py-2" required />
+              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="E-mail" className="w-full rounded-md border px-3 py-2" required />
+              {!editingId ? (
+                <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Senha inicial" className="w-full rounded-md border px-3 py-2" required />
+              ) : null}
 
-        {/* Lista de Usuários */}
-        <TabsContent value="list">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Usuários do Sistema</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filtrar
+              <select name="role" value={form.role} onChange={handleChange} className="w-full rounded-md border px-3 py-2">
+                <option value="ADMIN">Administrador</option>
+                <option value="MANAGER">Gerente</option>
+                <option value="USER">Usuário</option>
+              </select>
+
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input name="active" type="checkbox" checked={form.active} onChange={handleChange} />
+                Usuário ativo
+              </label>
+
+              <div className="flex gap-3">
+                <Button type="submit" className="flex-1 gap-2" disabled={saving}>
+                  <Plus className="h-4 w-4" />
+                  {saving ? "Salvando..." : editingId ? "Atualizar" : "Criar"}
+                </Button>
+                {editingId ? (
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    Cancelar
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
-                </div>
+                ) : null}
               </div>
-              <CardDescription>
-                Gerencie os usuários e suas permissões
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar usuários..."
-                      className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 rounded-lg border border-gray-200"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <select
-                    className="px-3 py-2 text-sm bg-gray-50 rounded-lg border border-gray-200"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">Todos</option>
-                    <option value="active">Ativos</option>
-                    <option value="inactive">Inativos</option>
-                  </select>
-                </div>
+            </form>
+          </CardContent>
+        </Card>
 
-                <div className="space-y-4">
-                  {filteredUsers.map(user => (
-                    <div
-                      key={user.id}
-                      className="p-4 rounded-lg border border-gray-200 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-medium">
-                            {user.name.charAt(0)}
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{user.name}</h4>
-                            <p className="text-sm text-gray-500">{user.email}</p>
-                            <span className="inline-flex items-center px-2 py-1 mt-1 text-xs font-medium rounded-full bg-gray-100">
-                              {user.role}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePasswordReset(user.email)}
-                          >
-                            <Lock className="h-4 w-4 mr-2" />
-                            Resetar Senha
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleStatusChange(user)}
-                            disabled={togglingStatus}
-                          >
-                            {user.active ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-500" />
-                            )}
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-center text-sm text-gray-500">
-                        <Clock className="h-4 w-4 mr-2" />
-                        Criado em: {format(new Date(user.created_at), "dd/MM/yyyy")}
-                      </div>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Usuários cadastrados</CardTitle>
+                <CardDescription>{users.length} conta(s) administrativas registradas.</CardDescription>
+              </div>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nome, e-mail ou papel"
+                className="w-full rounded-md border px-3 py-2 md:w-80"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {filteredUsers.map((user) => (
+              <div key={user.id} className="rounded-lg border p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900">{user.name}</p>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          user.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {user.active ? "Ativo" : "Inativo"}
+                      </span>
                     </div>
-                  ))}
+                    <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+                      <span className="inline-flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" />
+                        {userRoleLabel(user.role)}
+                      </span>
+                      <span>Criado em {formatDate(user.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleToggleStatus(user)}>
+                      {user.active ? "Desativar" : "Ativar"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleResetPassword(user)}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Senha
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(user)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            ))}
 
-        {/* Novo Usuário */}
-        <TabsContent value="new">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cadastrar Novo Usuário</CardTitle>
-              <CardDescription>
-                Adicione um novo usuário ao sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nome Completo *</label>
-                    <input
-                      {...form.register("name")}
-                      className="w-full rounded-md border p-2"
-                    />
-                    {form.formState.errors.name && (
-                      <span className="text-sm text-red-500">{form.formState.errors.name.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">E-mail *</label>
-                    <input
-                      type="email"
-                      {...form.register("email")}
-                      className="w-full rounded-md border p-2"
-                    />
-                    {form.formState.errors.email && (
-                      <span className="text-sm text-red-500">{form.formState.errors.email.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Senha *</label>
-                    <input
-                      type="password"
-                      {...form.register("password")}
-                      className="w-full rounded-md border p-2"
-                    />
-                    {form.formState.errors.password && (
-                      <span className="text-sm text-red-500">{form.formState.errors.password.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Confirmar Senha *</label>
-                    <input
-                      type="password"
-                      {...form.register("confirmPassword")}
-                      className="w-full rounded-md border p-2"
-                    />
-                    {form.formState.errors.confirmPassword && (
-                      <span className="text-sm text-red-500">{form.formState.errors.confirmPassword.message}</span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Cargo *</label>
-                    <select
-                      {...form.register("role")}
-                      className="w-full rounded-md border p-2"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="admin">Administrador</option>
-                      <option value="financeiro">Financeiro</option>
-                      <option value="comercial">Comercial</option>
-                      <option value="producao">Produção</option>
-                    </select>
-                    {form.formState.errors.role && (
-                      <span className="text-sm text-red-500">{form.formState.errors.role.message}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={creatingUser}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {creatingUser ? "Cadastrando..." : "Cadastrar Usuário"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <ConfirmDialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
-        onConfirm={confirmDialog.action}
-      />
+            {filteredUsers.length === 0 ? (
+              <p className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
+                Nenhum usuário encontrado com o filtro atual.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

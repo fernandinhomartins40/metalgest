@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MANAGER
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+  TRIAL
+}
+
+enum ClientType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum ClientCategory {
+  POTENTIAL
+  REGULAR
+  VIP
+}
+
+enum QuoteStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ServiceOrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model User {
+  id                    String             @id @default(uuid())
+  email                 String             @unique
+  name                  String
+  password              String
+  role                  UserRole           @default(USER)
+  active                Boolean            @default(true)
+  emailVerified         Boolean            @default(false)
+  plan                  PlanType           @default(FREE)
+  subscriptionStatus    SubscriptionStatus @default(TRIAL)
+  subscriptionId        String?
+  subscriptionExpiresAt DateTime?
+  phone                 String?
+  avatar                String?
+  lastLogin             DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  refreshTokens RefreshToken[]
+  clients       Client[]
+  products      Product[]
+  services      Service[]
+  quotes        Quote[]
+  serviceOrders ServiceOrder[]
+  transactions  Transaction[]
+  settings      Setting[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Client {
+  id                String         @id @default(uuid())
+  type              ClientType     @default(BUSINESS)
+  name              String
+  tradeName         String?
+  email             String?
+  phone             String?
+  mobile            String?
+  document          String?
+  stateRegistration String?
+  cityRegistration  String?
+  zipCode           String?
+  street            String?
+  number            String?
+  complement        String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  country           String?        @default("Brasil")
+  address           String?
+  contactName       String?
+  contactRole       String?
+  category          ClientCategory @default(REGULAR)
+  notes             String?
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  userId            String
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quotes        Quote[]
+  serviceOrders ServiceOrder[]
+
+  @@index([userId])
+  @@index([document])
+  @@index([email])
+  @@map("clients")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  code        String?
+  name        String
+  description String?
+  category    String?
+  unit        String   @default("un")
+  costPrice   Decimal  @default(0) @db.Decimal(10, 2)
+  salePrice   Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  minStock    Int      @default(0)
+  active      Boolean  @default(true)
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quoteItems QuoteItem[]
+
+  @@index([userId])
+  @@index([code])
+  @@index([category])
+  @@map("products")
+}
+
+model Service {
+  id                String   @id @default(uuid())
+  code              String?
+  name              String
+  description       String?
+  category          String?
+  unit              String   @default("h")
+  costPrice         Decimal  @default(0) @db.Decimal(10, 2)
+  salePrice         Decimal  @db.Decimal(10, 2)
+  estimatedDuration Int?
+  active            Boolean  @default(true)
+  tags              String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quoteItems QuoteItem[]
+
+  @@index([userId])
+  @@index([code])
+  @@index([category])
+  @@map("services")
+}
+
+model Quote {
+  id                  String      @id @default(uuid())
+  quoteNumber         String
+  clientId            String
+  userId              String
+  description         String?
+  subtotal            Decimal     @default(0) @db.Decimal(10, 2)
+  discount            Decimal     @default(0) @db.Decimal(10, 2)
+  tax                 Decimal     @default(0) @db.Decimal(10, 2)
+  totalValue          Decimal     @db.Decimal(10, 2)
+  validUntil          DateTime?
+  status              QuoteStatus @default(DRAFT)
+  publicToken         String?     @unique
+  publicLinkEnabled   Boolean     @default(false)
+  publicLinkExpiresAt DateTime?
+  notes               String?
+  termsAndConditions  String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         QuoteItem[]
+  serviceOrders ServiceOrder[]
+
+  @@unique([userId, quoteNumber])
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  productId   String?
+  serviceId   String?
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  totalPrice  Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+  @@index([productId])
+  @@index([serviceId])
+  @@map("quote_items")
+}
+
+model ServiceOrder {
+  id               String               @id @default(uuid())
+  orderNumber      String
+  clientId         String
+  userId           String
+  quoteId          String?
+  description      String
+  status           ServiceOrderStatus   @default(PENDING)
+  priority         ServiceOrderPriority @default(MEDIUM)
+  startDate        DateTime?
+  estimatedEndDate DateTime?
+  actualEndDate    DateTime?
+  notes            String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quote  Quote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, orderNumber])
+  @@index([userId])
+  @@index([clientId])
+  @@index([quoteId])
+  @@index([status])
+  @@map("service_orders")
+}
+
+model Transaction {
+  id             String            @id @default(uuid())
+  userId         String
+  type           TransactionType
+  category       String
+  amount         Decimal           @db.Decimal(10, 2)
+  description    String
+  date           DateTime          @default(now())
+  paymentMethod  String?
+  status         TransactionStatus @default(PENDING)
+  dueDate        DateTime?
+  paidAt         DateTime?
+  documentNumber String?
+  attachments    String[]          @default([])
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([category])
+  @@index([date])
+  @@map("transactions")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId])
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  module    String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

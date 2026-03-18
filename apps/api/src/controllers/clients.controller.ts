@@ -26,7 +26,7 @@ export class ClientsController {
    * GET /api/clients/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const client = await clientsService.getClientById(id, req.user!.id, req.user!.role);
     res.json(client);
   });
@@ -45,7 +45,7 @@ export class ClientsController {
    * PUT /api/clients/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const client = await clientsService.updateClient(id, req.user!.id, req.user!.role, req.body);
     res.json(client);
   });
@@ -55,7 +55,7 @@ export class ClientsController {
    * DELETE /api/clients/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await clientsService.deleteClient(id, req.user!.id, req.user!.role);
     res.json(result);
   });
@@ -65,7 +65,7 @@ export class ClientsController {
    * GET /api/clients/:id/stats
    */
   stats = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const stats = await clientsService.getClientStats(id, req.user!.id, req.user!.role);
     res.json(stats);
   });

@@ -1,342 +1,348 @@
-/**
- * API Service
- * Real implementation that communicates with the backend API
- */
+import { httpClient } from "./httpClient"
 
-import { httpClient } from './httpClient';
+const createError = (response, fallbackMessage) => {
+  const error = new Error(response?.error?.message || fallbackMessage)
+  error.code = response?.error?.code
+  error.status = response?.error?.status
+  error.details = response?.error?.details
+  return error
+}
+
+const unwrap = async (request, fallbackMessage) => {
+  const response = await request
+
+  if (!response.success) {
+    throw createError(response, fallbackMessage)
+  }
+
+  return response.data
+}
+
+const flattenObject = (value, prefix = "", result = {}) => {
+  Object.entries(value || {}).forEach(([key, currentValue]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key
+
+    if (
+      currentValue &&
+      typeof currentValue === "object" &&
+      !Array.isArray(currentValue) &&
+      !(currentValue instanceof Date)
+    ) {
+      flattenObject(currentValue, nextKey, result)
+    } else {
+      result[nextKey] = String(currentValue ?? "")
+    }
+  })
+
+  return result
+}
+
+const getDateRangeByPeriod = (period = "month") => {
+  const now = new Date()
+  const startDate = new Date(now)
+
+  if (period === "year") {
+    startDate.setMonth(0, 1)
+  } else if (period === "quarter") {
+    startDate.setMonth(now.getMonth() - 2, 1)
+  } else {
+    startDate.setDate(1)
+  }
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: now.toISOString(),
+  }
+}
+
+const buildDreReport = async (period = "month") => {
+  const range = getDateRangeByPeriod(period)
+  const [balance, summary] = await Promise.all([
+    api.transactions.getBalance(range),
+    api.transactions.getSummaryByCategory(range),
+  ])
+
+  const incomeEntries = summary.filter((item) => item.type === "INCOME")
+  const expenseEntries = summary.filter((item) => item.type === "EXPENSE")
+
+  const receitaBruta = Number(balance.income.total || 0)
+  const despesasOperacionais = Number(balance.expenses.total || 0)
+  const impostos = expenseEntries
+    .filter((item) => /imposto|tribut/i.test(item.category))
+    .reduce((sum, item) => sum + Number(item.total || 0), 0)
+  const custos = expenseEntries
+    .filter((item) => /custo|cmv/i.test(item.category))
+    .reduce((sum, item) => sum + Number(item.total || 0), 0)
+  const despesasFinanceiras = expenseEntries
+    .filter((item) => /financeir/i.test(item.category))
+    .reduce((sum, item) => sum + Number(item.total || 0), 0)
+  const receitasFinanceiras = incomeEntries
+    .filter((item) => /financeir/i.test(item.category))
+    .reduce((sum, item) => sum + Number(item.total || 0), 0)
+
+  const receitaLiquida = receitaBruta - impostos
+  const lucroBruto = receitaLiquida - custos
+  const resultadoOperacional = lucroBruto - despesasOperacionais
+  const resultadoFinanceiro = receitasFinanceiras - despesasFinanceiras
+  const lucroLiquido = resultadoOperacional + resultadoFinanceiro
+
+  return {
+    receitaBruta,
+    impostos,
+    receitaLiquida,
+    custos,
+    lucroBruto,
+    despesasOperacionais,
+    resultadoOperacional,
+    resultadoFinanceiro,
+    lucroLiquido,
+    detalhamento: {
+      receitas: incomeEntries.reduce((acc, item) => {
+        acc[item.category] = Number(item.total || 0)
+        return acc
+      }, {}),
+      impostos: expenseEntries
+        .filter((item) => /imposto|tribut/i.test(item.category))
+        .reduce((acc, item) => {
+          acc[item.category] = Number(item.total || 0)
+          return acc
+        }, {}),
+      custos: expenseEntries
+        .filter((item) => /custo|cmv/i.test(item.category))
+        .reduce((acc, item) => {
+          acc[item.category] = Number(item.total || 0)
+          return acc
+        }, {}),
+      despesas: expenseEntries.reduce((acc, item) => {
+        acc[item.category] = Number(item.total || 0)
+        return acc
+      }, {}),
+      financeiro: {
+        receitas: receitasFinanceiras,
+        despesas: despesasFinanceiras,
+      },
+    },
+  }
+}
 
 export const api = {
-  // ==================== DASHBOARD APIs ====================
+  upload: {
+    logo: async (file) => {
+      const formData = new FormData()
+      formData.append("file", file)
+      return unwrap(httpClient.upload("/upload/logo", formData), "Failed to upload logo")
+    },
+    document: async (file) => {
+      const formData = new FormData()
+      formData.append("file", file)
+      return unwrap(httpClient.upload("/upload/documents", formData), "Failed to upload document")
+    },
+  },
+
   dashboard: {
-    getStats: async () => {
-      const response = await httpClient.get('/dashboard/stats');
-      return response.success ? response.data : null;
-    },
-
-    getRevenueChart: async (year) => {
-      const response = await httpClient.get('/dashboard/revenue-chart', { year });
-      return response.success ? response.data : null;
-    },
-
-    getQuotesConversion: async () => {
-      const response = await httpClient.get('/dashboard/quotes-conversion');
-      return response.success ? response.data : null;
-    },
-
-    getTopClients: async (limit = 10) => {
-      const response = await httpClient.get('/dashboard/top-clients', { limit });
-      return response.success ? response.data : [];
-    },
+    getStats: () => unwrap(httpClient.get("/dashboard/stats"), "Failed to load dashboard stats"),
+    getRevenueChart: (year) =>
+      unwrap(httpClient.get("/dashboard/revenue-chart", { year }), "Failed to load revenue chart"),
+    getQuotesConversion: () =>
+      unwrap(httpClient.get("/dashboard/quotes-conversion"), "Failed to load conversion rate"),
+    getTopClients: (limit = 10) =>
+      unwrap(httpClient.get("/dashboard/top-clients", { limit }), "Failed to load top clients"),
   },
 
-  // ==================== PRODUCTS APIs ====================
   products: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/products', params);
-      return response.success ? response.data : { products: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/products/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (productData) => {
-      const response = await httpClient.post('/products', productData);
-      return response;
-    },
-
-    update: async (id, productData) => {
-      const response = await httpClient.put(`/products/${id}`, productData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/products/${id}`);
-      return response;
-    },
-
-    updateStock: async (id, quantity, operation = 'set') => {
-      const response = await httpClient.patch(`/products/${id}/stock`, { quantity, operation });
-      return response;
-    },
-
-    getLowStock: async () => {
-      const response = await httpClient.get('/products/low-stock');
-      return response.success ? response.data : [];
-    },
-
-    getCategories: async () => {
-      const response = await httpClient.get('/products/categories');
-      return response.success ? response.data : [];
-    },
+    list: async (params = {}) => (await unwrap(httpClient.get("/products", params), "Failed to list products")).products,
+    listWithPagination: (params = {}) => unwrap(httpClient.get("/products", params), "Failed to list products"),
+    search: (params = {}) =>
+      api.products.list({
+        search: params.term,
+        category: params.category && params.category !== "all" ? params.category : undefined,
+      }),
+    get: (id) => unwrap(httpClient.get(`/products/${id}`), "Failed to load product"),
+    create: (payload) => unwrap(httpClient.post("/products", payload), "Failed to create product"),
+    update: (id, payload) => unwrap(httpClient.put(`/products/${id}`, payload), "Failed to update product"),
+    delete: (id) => unwrap(httpClient.delete(`/products/${id}`), "Failed to delete product"),
+    updateStock: (id, quantity, operation = "set") =>
+      unwrap(httpClient.patch(`/products/${id}/stock`, { quantity, operation }), "Failed to update stock"),
+    getLowStock: () => unwrap(httpClient.get("/products/low-stock"), "Failed to load low stock products"),
+    getCategories: () => unwrap(httpClient.get("/products/categories"), "Failed to load product categories"),
   },
 
-  // ==================== SERVICES APIs ====================
   services: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/services', params);
-      return response.success ? response.data : { services: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/services/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (serviceData) => {
-      const response = await httpClient.post('/services', serviceData);
-      return response;
-    },
-
-    update: async (id, serviceData) => {
-      const response = await httpClient.put(`/services/${id}`, serviceData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/services/${id}`);
-      return response;
-    },
-
-    getCategories: async () => {
-      const response = await httpClient.get('/services/categories');
-      return response.success ? response.data : [];
-    },
+    list: async (params = {}) => (await unwrap(httpClient.get("/services", params), "Failed to list services")).services,
+    listWithPagination: (params = {}) => unwrap(httpClient.get("/services", params), "Failed to list services"),
+    search: (params = {}) =>
+      api.services.list({
+        search: params.term,
+        category: params.category && params.category !== "all" ? params.category : undefined,
+      }),
+    get: (id) => unwrap(httpClient.get(`/services/${id}`), "Failed to load service"),
+    create: (payload) => unwrap(httpClient.post("/services", payload), "Failed to create service"),
+    update: (id, payload) => unwrap(httpClient.put(`/services/${id}`, payload), "Failed to update service"),
+    delete: (id) => unwrap(httpClient.delete(`/services/${id}`), "Failed to delete service"),
+    getCategories: () => unwrap(httpClient.get("/services/categories"), "Failed to load service categories"),
   },
 
-  // ==================== CLIENTS APIs ====================
   clients: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/clients', params);
-      return response.success ? response.data : { clients: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/clients/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (clientData) => {
-      const response = await httpClient.post('/clients', clientData);
-      return response;
-    },
-
-    update: async (id, clientData) => {
-      const response = await httpClient.put(`/clients/${id}`, clientData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/clients/${id}`);
-      return response;
-    },
-
-    getStats: async (id) => {
-      const response = await httpClient.get(`/clients/${id}/stats`);
-      return response.success ? response.data : null;
-    },
+    list: async (params = {}) => (await unwrap(httpClient.get("/clients", params), "Failed to list clients")).clients,
+    listWithPagination: (params = {}) => unwrap(httpClient.get("/clients", params), "Failed to list clients"),
+    get: (id) => unwrap(httpClient.get(`/clients/${id}`), "Failed to load client"),
+    create: (payload) => unwrap(httpClient.post("/clients", payload), "Failed to create client"),
+    update: (id, payload) => unwrap(httpClient.put(`/clients/${id}`, payload), "Failed to update client"),
+    delete: (id) => unwrap(httpClient.delete(`/clients/${id}`), "Failed to delete client"),
+    getStats: (id) => unwrap(httpClient.get(`/clients/${id}/stats`), "Failed to load client stats"),
   },
 
-  // ==================== QUOTES APIs ====================
   quotes: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/quotes', params);
-      return response.success ? response.data : { quotes: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/quotes/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    getByPublicToken: async (token) => {
-      const response = await httpClient.get(`/quotes/public/${token}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (quoteData) => {
-      const response = await httpClient.post('/quotes', quoteData);
-      return response;
-    },
-
-    update: async (id, quoteData) => {
-      const response = await httpClient.put(`/quotes/${id}`, quoteData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/quotes/${id}`);
-      return response;
-    },
-
-    updateStatus: async (id, status) => {
-      const response = await httpClient.patch(`/quotes/${id}/status`, { status });
-      return response;
-    },
-
-    togglePublicLink: async (id, enabled) => {
-      const response = await httpClient.patch(`/quotes/${id}/public-link`, { enabled });
-      return response;
-    },
-
-    duplicate: async (id) => {
-      const response = await httpClient.post(`/quotes/${id}/duplicate`);
-      return response;
-    },
+    list: async (params = {}) => (await unwrap(httpClient.get("/quotes", params), "Failed to list quotes")).quotes,
+    listWithPagination: (params = {}) => unwrap(httpClient.get("/quotes", params), "Failed to list quotes"),
+    get: (id) => unwrap(httpClient.get(`/quotes/${id}`), "Failed to load quote"),
+    getByPublicToken: (token) =>
+      unwrap(httpClient.get(`/quotes/public/${token}`), "Failed to load public quote"),
+    getPublicQuote: (token) => api.quotes.getByPublicToken(token),
+    create: (payload) => unwrap(httpClient.post("/quotes", payload), "Failed to create quote"),
+    update: (id, payload) => unwrap(httpClient.put(`/quotes/${id}`, payload), "Failed to update quote"),
+    delete: (id) => unwrap(httpClient.delete(`/quotes/${id}`), "Failed to delete quote"),
+    updateStatus: (id, status) =>
+      unwrap(httpClient.patch(`/quotes/${id}/status`, { status }), "Failed to update quote status"),
+    updatePublicQuoteResponse: (token, payload) =>
+      unwrap(
+        httpClient.patch(`/quotes/public/${token}/status`, {
+          status: String(payload.status || "").toUpperCase(),
+        }),
+        "Failed to update public quote response"
+      ),
+    togglePublicLink: (id, enabled) =>
+      unwrap(httpClient.patch(`/quotes/${id}/public-link`, { enabled }), "Failed to toggle public link"),
+    duplicate: (id) => unwrap(httpClient.post(`/quotes/${id}/duplicate`), "Failed to duplicate quote"),
   },
 
-  // ==================== SERVICE ORDERS APIs ====================
   serviceOrders: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/service-orders', params);
-      return response.success ? response.data : { orders: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/service-orders/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (orderData) => {
-      const response = await httpClient.post('/service-orders', orderData);
-      return response;
-    },
-
-    update: async (id, orderData) => {
-      const response = await httpClient.put(`/service-orders/${id}`, orderData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/service-orders/${id}`);
-      return response;
-    },
-
-    updateStatus: async (id, status) => {
-      const response = await httpClient.patch(`/service-orders/${id}/status`, { status });
-      return response;
-    },
+    list: async (params = {}) =>
+      (await unwrap(httpClient.get("/service-orders", params), "Failed to list service orders")).orders,
+    listWithPagination: (params = {}) =>
+      unwrap(httpClient.get("/service-orders", params), "Failed to list service orders"),
+    get: (id) => unwrap(httpClient.get(`/service-orders/${id}`), "Failed to load service order"),
+    create: (payload) => unwrap(httpClient.post("/service-orders", payload), "Failed to create service order"),
+    update: (id, payload) => unwrap(httpClient.put(`/service-orders/${id}`, payload), "Failed to update service order"),
+    delete: (id) => unwrap(httpClient.delete(`/service-orders/${id}`), "Failed to delete service order"),
+    updateStatus: (id, status) =>
+      unwrap(httpClient.patch(`/service-orders/${id}/status`, { status }), "Failed to update service order status"),
   },
 
-  // ==================== TRANSACTIONS APIs ====================
   transactions: {
+    list: async (params = {}) =>
+      (await unwrap(httpClient.get("/transactions", params), "Failed to list transactions")).transactions,
+    listWithPagination: (params = {}) =>
+      unwrap(httpClient.get("/transactions", params), "Failed to list transactions"),
+    get: (id) => unwrap(httpClient.get(`/transactions/${id}`), "Failed to load transaction"),
+    create: (payload) => unwrap(httpClient.post("/transactions", payload), "Failed to create transaction"),
+    update: (id, payload) => unwrap(httpClient.put(`/transactions/${id}`, payload), "Failed to update transaction"),
+    delete: (id) => unwrap(httpClient.delete(`/transactions/${id}`), "Failed to delete transaction"),
+    getBalance: (params = {}) => unwrap(httpClient.get("/transactions/balance", params), "Failed to load balance"),
+    getSummaryByCategory: (params = {}) =>
+      unwrap(httpClient.get("/transactions/summary/category", params), "Failed to load category summary"),
+    getSummaryByMonth: (year) =>
+      unwrap(httpClient.get("/transactions/summary/month", { year }), "Failed to load monthly summary"),
+  },
+
+  financial: {
+    create: (payload) =>
+      api.transactions.create({
+        ...payload,
+        amount: payload.amount ?? payload.value,
+        type: String(payload.type || "").toUpperCase(),
+      }),
     list: async (params = {}) => {
-      const response = await httpClient.get('/transactions', params);
-      return response.success ? response.data : { transactions: [], pagination: {} };
+      const transactions = await api.transactions.list(params)
+      return transactions.map((transaction) => ({
+        ...transaction,
+        value: Number(transaction.amount || 0),
+        type: transaction.type?.toLowerCase(),
+      }))
     },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/transactions/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (transactionData) => {
-      const response = await httpClient.post('/transactions', transactionData);
-      return response;
-    },
-
-    update: async (id, transactionData) => {
-      const response = await httpClient.put(`/transactions/${id}`, transactionData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/transactions/${id}`);
-      return response;
-    },
-
-    getBalance: async (params = {}) => {
-      const response = await httpClient.get('/transactions/balance', params);
-      return response.success ? response.data : null;
-    },
-
-    getSummaryByCategory: async (params = {}) => {
-      const response = await httpClient.get('/transactions/summary/category', params);
-      return response.success ? response.data : [];
-    },
-
-    getSummaryByMonth: async (year) => {
-      const response = await httpClient.get('/transactions/summary/month', { year });
-      return response.success ? response.data : [];
+    getSummary: async (startDate, endDate) => {
+      const balance = await api.transactions.getBalance({ startDate, endDate })
+      return {
+        totalIncome: Number(balance.income.total || 0),
+        totalExpense: Number(balance.expenses.total || 0),
+        netBalance: Number(balance.balance || 0),
+        categorySummary: [],
+      }
     },
   },
 
-  // ==================== USERS APIs ====================
+  dre: {
+    getReport: (period) => buildDreReport(period),
+    getHistorical: async (months = 12) => {
+      const year = new Date().getFullYear()
+      const data = await api.transactions.getSummaryByMonth(year)
+      return data.slice(-months).map((entry) => ({
+        month: entry.month,
+        lucroLiquido: Number(entry.balance || 0),
+        receitas: Number(entry.income || 0),
+        despesas: Number(entry.expenses || 0),
+      }))
+    },
+    getComparative: async (period) => {
+      const current = await buildDreReport(period)
+      const previous = await buildDreReport(period === "year" ? "quarter" : "month")
+      return {
+        atual: current,
+        anterior: previous,
+      }
+    },
+  },
+
   users: {
-    list: async (params = {}) => {
-      const response = await httpClient.get('/users', params);
-      return response.success ? response.data : { users: [], pagination: {} };
-    },
-
-    get: async (id) => {
-      const response = await httpClient.get(`/users/${id}`);
-      return response.success ? response.data : null;
-    },
-
-    create: async (userData) => {
-      const response = await httpClient.post('/users', userData);
-      return response;
-    },
-
-    update: async (id, userData) => {
-      const response = await httpClient.put(`/users/${id}`, userData);
-      return response;
-    },
-
-    delete: async (id) => {
-      const response = await httpClient.delete(`/users/${id}`);
-      return response;
-    },
-
-    resetPassword: async (id, newPassword) => {
-      const response = await httpClient.post(`/users/${id}/reset-password`, { newPassword });
-      return response;
-    },
-
-    getStats: async (id) => {
-      const response = await httpClient.get(`/users/${id}/stats`);
-      return response.success ? response.data : null;
-    },
+    list: async (params = {}) => (await unwrap(httpClient.get("/users", params), "Failed to list users")).users,
+    listWithPagination: (params = {}) => unwrap(httpClient.get("/users", params), "Failed to list users"),
+    get: (id) => unwrap(httpClient.get(`/users/${id}`), "Failed to load user"),
+    create: (payload) =>
+      unwrap(
+        httpClient.post("/users", {
+          ...payload,
+          role: String(payload.role || "USER").toUpperCase(),
+        }),
+        "Failed to create user"
+      ),
+    update: (id, payload) =>
+      unwrap(
+        httpClient.put(`/users/${id}`, {
+          ...payload,
+          role: payload.role ? String(payload.role).toUpperCase() : undefined,
+        }),
+        "Failed to update user"
+      ),
+    toggleStatus: (id, active) => api.users.update(id, { active }),
+    delete: (id) => unwrap(httpClient.delete(`/users/${id}`), "Failed to delete user"),
+    resetPassword: (id, newPassword) =>
+      unwrap(httpClient.post(`/users/${id}/reset-password`, { newPassword }), "Failed to reset password"),
+    getStats: (id) => unwrap(httpClient.get(`/users/${id}/stats`), "Failed to load user stats"),
   },
 
-  // ==================== SETTINGS APIs ====================
   settings: {
-    list: async () => {
-      const response = await httpClient.get('/settings');
-      return response.success ? response.data : {};
-    },
+    list: () => unwrap(httpClient.get("/settings"), "Failed to list settings"),
+    get: (key) => unwrap(httpClient.get(`/settings/${key}`), "Failed to load setting"),
+    upsert: (key, value) => unwrap(httpClient.put(`/settings/${key}`, { value }), "Failed to save setting"),
+    updateBulk: (settings) => unwrap(httpClient.post("/settings/bulk", settings), "Failed to save settings"),
+    delete: (key) => unwrap(httpClient.delete(`/settings/${key}`), "Failed to delete setting"),
+    getCompany: () => unwrap(httpClient.get("/settings/company"), "Failed to load company settings"),
+    updateCompany: (payload) =>
+      unwrap(httpClient.put("/settings/company", payload), "Failed to update company settings"),
+    getCompanyData: () => api.settings.getCompany(),
+    saveCompanyData: async (data, logoFile) => {
+      const nextPayload = { ...data }
 
-    get: async (key) => {
-      const response = await httpClient.get(`/settings/${key}`);
-      return response.success ? response.data : null;
-    },
+      if (logoFile) {
+        const upload = await api.upload.logo(logoFile)
+        nextPayload.logo = upload.url
+      }
 
-    upsert: async (key, value) => {
-      const response = await httpClient.put(`/settings/${key}`, { value });
-      return response;
+      return api.settings.updateCompany(nextPayload)
     },
-
-    updateBulk: async (settings) => {
-      const response = await httpClient.post('/settings/bulk', settings);
-      return response;
-    },
-
-    delete: async (key) => {
-      const response = await httpClient.delete(`/settings/${key}`);
-      return response;
-    },
-
-    getCompany: async () => {
-      const response = await httpClient.get('/settings/company');
-      return response.success ? response.data : {};
-    },
-
-    updateCompany: async (companyData) => {
-      const response = await httpClient.put('/settings/company', companyData);
-      return response;
-    },
+    getSystemSettings: () => api.settings.list(),
+    saveSystemSettings: (settings) => api.settings.updateBulk(flattenObject(settings)),
   },
-};
+}
 
-export default api;
+export default api

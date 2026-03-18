@@ -414,8 +414,8 @@ export class ProductsService {
     });
 
     const categories = products
-      .map((p) => p.category)
-      .filter((c): c is string => c !== null)
+      .map((product: { category: string | null }) => product.category)
+      .filter((category): category is string => category !== null)
       .sort();
 
     return categories;

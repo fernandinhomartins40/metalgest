@@ -1,99 +1,154 @@
-// User Types
+export type UserRole = "ADMIN" | "MANAGER" | "USER"
+export type ClientType = "INDIVIDUAL" | "BUSINESS"
+export type ClientCategory = "POTENTIAL" | "REGULAR" | "VIP"
+export type QuoteStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED"
+export type ServiceOrderStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+export type ServiceOrderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+export type TransactionType = "INCOME" | "EXPENSE"
+export type TransactionStatus = "PENDING" | "PAID" | "CANCELLED"
+
 export interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'user'
-  created_at: string
-  updated_at: string
+  role: UserRole
+  active: boolean
+  emailVerified: boolean
+  phone?: string | null
+  avatar?: string | null
+  lastLogin?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
-// Product Types
+export interface Client {
+  id: string
+  type: ClientType
+  name: string
+  tradeName?: string | null
+  email?: string | null
+  phone?: string | null
+  mobile?: string | null
+  document?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  category: ClientCategory
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Product {
   id: string
+  code?: string | null
   name: string
-  description: string
-  price: number
-  category: string
-  user_id: string
-  created_at: string
-  updated_at: string
+  description?: string | null
+  category?: string | null
+  unit: string
+  costPrice: number | string
+  salePrice: number | string
+  stock: number
+  minStock: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-// Service Types
 export interface Service {
   id: string
+  code?: string | null
   name: string
-  description: string
-  price: number
-  category: string
-  user_id: string
-  created_at: string
-  updated_at: string
-}
-
-// Quote Types
-export interface Quote {
-  id: string
-  client_id: string
-  description: string
-  total_value: number
-  status: 'pending' | 'approved' | 'rejected'
-  items: QuoteItem[]
-  created_at: string
-  updated_at: string
+  description?: string | null
+  category?: string | null
+  unit: string
+  costPrice: number | string
+  salePrice: number | string
+  estimatedDuration?: number | null
+  active: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface QuoteItem {
   id: string
-  quote_id: string
-  product: Product
+  description: string
   quantity: number
-  unitPrice: number
+  unitPrice: number | string
+  totalPrice: number | string
+  productId?: string | null
+  serviceId?: string | null
 }
 
-// Client Types
-export interface Client {
+export interface Quote {
   id: string
-  name: string
-  email: string
-  phone?: string
-  address?: string
-  user_id: string
-  created_at: string
-  updated_at: string
+  quoteNumber: string
+  clientId: string
+  description?: string | null
+  subtotal: number | string
+  discount: number | string
+  tax: number | string
+  totalValue: number | string
+  validUntil?: string | null
+  status: QuoteStatus
+  publicToken?: string | null
+  publicLinkEnabled: boolean
+  createdAt: string
+  updatedAt: string
+  items?: QuoteItem[]
 }
 
-// API Response Types
-export interface ApiResponse<T = any> {
-  data: T
-  error: string | null
+export interface ServiceOrder {
+  id: string
+  orderNumber: string
+  clientId: string
+  quoteId?: string | null
+  description: string
+  status: ServiceOrderStatus
+  priority: ServiceOrderPriority
+  startDate?: string | null
+  estimatedEndDate?: string | null
+  actualEndDate?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
-// Form Types
-export interface LoginForm {
-  email: string
-  password: string
-  rememberMe: boolean
-  keepConnected: boolean
+export interface Transaction {
+  id: string
+  type: TransactionType
+  category: string
+  amount: number | string
+  description: string
+  date: string
+  paymentMethod?: string | null
+  status: TransactionStatus
+  dueDate?: string | null
+  paidAt?: string | null
+  documentNumber?: string | null
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
-export interface RegisterForm {
-  name: string
-  email: string
-  password: string
-  confirmPassword: string
+export interface ApiError {
+  code: string
+  message: string
+  details?: unknown
+  status?: number
 }
 
-// Context Types
-export interface UserContextType {
-  user: User | null
-  loading: boolean
+export interface ApiResponse<T = unknown> {
+  success: boolean
+  data: T | null
+  error: ApiError | null
 }
 
-// Hook Types
-export interface UseApiReturn<T = any> {
-  execute: (...args: any[]) => Promise<T>
-  loading: boolean
-  error: Error | null
+export interface PaginatedResponse<T> {
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  data?: T[]
 }

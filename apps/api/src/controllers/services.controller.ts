@@ -26,7 +26,7 @@ export class ServicesController {
    * GET /api/services/:id
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const service = await servicesService.getServiceById(id, req.user!.id, req.user!.role);
     res.json(service);
   });
@@ -45,7 +45,7 @@ export class ServicesController {
    * PUT /api/services/:id
    */
   update = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const service = await servicesService.updateService(id, req.user!.id, req.user!.role, req.body);
     res.json(service);
   });
@@ -55,7 +55,7 @@ export class ServicesController {
    * DELETE /api/services/:id
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const result = await servicesService.deleteService(id, req.user!.id, req.user!.role);
     res.json(result);
   });

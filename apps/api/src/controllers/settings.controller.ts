@@ -17,7 +17,7 @@ export class SettingsController {
    * GET /api/settings/:key
    */
   get = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { key } = req.params;
+    const key = String(req.params.key);
     const setting = await settingsService.getSettingByKey(req.user!.id, req.user!.role, key);
     res.json(setting);
   });
@@ -27,7 +27,7 @@ export class SettingsController {
    * PUT /api/settings/:key
    */
   upsert = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { key } = req.params;
+    const key = String(req.params.key);
     const { value } = req.body;
     const setting = await settingsService.upsertSetting(req.user!.id, key, value);
     res.json(setting);
@@ -47,7 +47,7 @@ export class SettingsController {
    * DELETE /api/settings/:key
    */
   delete = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
-    const { key } = req.params;
+    const key = String(req.params.key);
     const result = await settingsService.deleteSetting(req.user!.id, req.user!.role, key);
     res.json(result);
   });
