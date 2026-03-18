@@ -14,9 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
-    name: Validate Monorepo
+  ci-deploy:
+    name: Validate, Smoke and Deploy
     runs-on: ubuntu-latest
+
+    env:
+      VPS_HOST: 72.60.10.112
+      VPS_USER: root
+      DEPLOY_PATH: /var/www/metalgest
+      BACKUP_PATH: /var/www/metalgest-backup
 
     steps:
       - name: Checkout repository
@@ -43,52 +49,20 @@ jobs:
       - name: API tests
         run: npm run test:api
 
-  smoke-docker:
-    name: Smoke Test Docker Stack
-    runs-on: ubuntu-latest
-    needs: validate
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Build and start containers
+        if: github.event_name == 'push'
         run: docker compose up -d --build
 
       - name: Smoke test stack
+        if: github.event_name == 'push'
         run: npm run smoke:docker
 
-      - name: Print logs on failure
-        if: failure()
-        run: docker compose logs --tail=200
-
-      - name: Stop containers
-        if: always()
+      - name: Stop local containers
+        if: always() && github.event_name == 'push'
         run: docker compose down -v
 
-  deploy:
-    name: Deploy to VPS
-    runs-on: ubuntu-latest
-    needs: smoke-docker
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    env:
-      VPS_HOST: 72.60.10.112
-      VPS_USER: root
-      DEPLOY_PATH: /var/www/metalgest
-      BACKUP_PATH: /var/www/metalgest-backup
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Validate deploy secret
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
         run: |
@@ -98,9 +72,11 @@ jobs:
           fi
 
       - name: Install sshpass
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Package deployment files
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           tar -czf deploy.tar.gz \
             apps \
@@ -117,6 +93,7 @@ jobs:
             tsconfig.base.json
 
       - name: Upload and deploy
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
         run: |
