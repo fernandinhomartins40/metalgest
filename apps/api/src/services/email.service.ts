@@ -16,13 +16,17 @@ type SendEmailInput = {
 
 type ActionEmailTemplateInput = {
   preview: string;
+  kicker: string;
   title: string;
   greeting: string;
   intro: string;
   actionLabel: string;
   actionUrl: string;
   expiryText: string;
+  highlights: string[];
+  securityNote: string;
   supportText: string;
+  accentColor: string;
 };
 
 type VerificationEmailInput = {
@@ -38,6 +42,8 @@ type PasswordResetEmailInput = {
   recipientName: string;
   token: string;
 };
+
+type UltraZendAuthMode = 'api_key' | 'access_token';
 
 type UltraZendWebhookPayload = {
   event?: string;
@@ -74,25 +80,101 @@ const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 const toJsonValue = (value: unknown) => value as Prisma.InputJsonValue;
 
 export class EmailService {
+  private readEnv(name: string) {
+    const value = process.env[name]?.trim();
+    return value ? value : null;
+  }
+
+  private looksLikeAiAgentKey(value: string) {
+    return value.startsWith('uai_');
+  }
+
+  private getApiKeyValue() {
+    return this.readEnv('ULTRAZEND_API_KEY');
+  }
+
+  private getAccessTokenValue() {
+    return this.readEnv('ULTRAZEND_ACCESS_TOKEN');
+  }
+
+  private getFromEmailValue() {
+    return this.readEnv('ULTRAZEND_FROM_EMAIL');
+  }
+
+  private getWebhookSecretValue() {
+    return this.readEnv('ULTRAZEND_WEBHOOK_SECRET');
+  }
+
+  private getConfiguredAuthMode(): UltraZendAuthMode | null {
+    if (this.getAccessTokenValue()) {
+      return 'access_token';
+    }
+
+    const apiKey = this.getApiKeyValue();
+    if (!apiKey || this.looksLikeAiAgentKey(apiKey)) {
+      return null;
+    }
+
+    return 'api_key';
+  }
+
   isConfigured() {
-    return Boolean(process.env.ULTRAZEND_API_KEY && process.env.ULTRAZEND_FROM_EMAIL);
+    return Boolean(this.getConfiguredAuthMode() && this.getFromEmailValue());
+  }
+
+  getConfigurationSummary() {
+    const apiKey = this.getApiKeyValue();
+    const accessToken = this.getAccessTokenValue();
+
+    return {
+      provider: 'ultrazend',
+      configured: this.isConfigured(),
+      authMode: this.getConfiguredAuthMode(),
+      fromEmailConfigured: Boolean(this.getFromEmailValue()),
+      webhookConfigured: Boolean(this.getWebhookSecretValue()),
+      frontendUrlConfigured: Boolean(this.readEnv('FRONTEND_URL') || this.readEnv('APP_PUBLIC_URL')),
+      hasApiKey: Boolean(apiKey),
+      hasAccessToken: Boolean(accessToken),
+      misconfiguredAiAgentKey: Boolean(apiKey && this.looksLikeAiAgentKey(apiKey)),
+    };
   }
 
   private getApiUrl() {
     return trimTrailingSlash(process.env.ULTRAZEND_API_URL || DEFAULT_ULTRAZEND_API_URL);
   }
 
-  private getApiKey() {
-    const apiKey = process.env.ULTRAZEND_API_KEY;
-    if (!apiKey) {
-      throw new AppError(503, 'UltraZend API key is not configured', 'EMAIL_SERVICE_UNAVAILABLE');
+  private getAuthHeaders(): Record<string, string> {
+    const accessToken = this.getAccessTokenValue();
+    if (accessToken) {
+      return {
+        Authorization: `Bearer ${accessToken}`,
+      };
     }
 
-    return apiKey;
+    const apiKey = this.getApiKeyValue();
+    if (!apiKey) {
+      throw new AppError(
+        503,
+        'UltraZend API key or access token is not configured',
+        'EMAIL_SERVICE_UNAVAILABLE'
+      );
+    }
+
+    if (this.looksLikeAiAgentKey(apiKey)) {
+      throw new AppError(
+        503,
+        'UltraZend AI Agent key cannot be used for transactional email. Configure ULTRAZEND_API_KEY or ULTRAZEND_ACCESS_TOKEN.',
+        'EMAIL_SERVICE_UNAVAILABLE'
+      );
+    }
+
+    return {
+      'x-api-key': apiKey,
+    };
   }
 
   private getFromEmail() {
-    const fromEmail = process.env.ULTRAZEND_FROM_EMAIL;
+    const fromEmail = this.getFromEmailValue();
     if (!fromEmail) {
       throw new AppError(503, 'UltraZend sender email is not configured', 'EMAIL_SERVICE_UNAVAILABLE');
     }
@@ -114,7 +196,7 @@ export class EmailService {
   }
 
   private getWebhookSecret() {
-    const secret = process.env.ULTRAZEND_WEBHOOK_SECRET;
+    const secret = this.getWebhookSecretValue();
     if (!secret) {
       throw new AppError(503, 'UltraZend webhook secret is not configured', 'EMAIL_WEBHOOK_NOT_CONFIGURED');
     }
@@ -130,12 +212,35 @@ export class EmailService {
 
   private buildActionEmailTemplate(input: ActionEmailTemplateInput) {
     const brandName = escapeHtml(this.getBrandName());
+    const safeKicker = escapeHtml(input.kicker);
     const safeTitle = escapeHtml(input.title);
     const safeGreeting = escapeHtml(input.greeting);
     const safeIntro = escapeHtml(input.intro);
     const safeExpiry = escapeHtml(input.expiryText);
+    const safeSecurityNote = escapeHtml(input.securityNote);
     const safeSupport = escapeHtml(input.supportText);
     const safePreview = escapeHtml(input.preview);
+    const highlightRows = input.highlights
+      .map(
+        (highlight, index) => `
+                  <tr>
+                    <td style="padding:${index === 0 ? '0' : '12px 0 0'};">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td valign="top" style="width:32px;">
+                            <div style="height:24px;width:24px;border-radius:999px;background:${input.accentColor};color:#ffffff;font-size:12px;font-weight:700;line-height:24px;text-align:center;">
+                              ${index + 1}
+                            </div>
+                          </td>
+                          <td style="padding-left:10px;font-size:14px;line-height:1.7;color:#334155;">
+                            ${escapeHtml(highlight)}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>`
+      )
+      .join('');
 
     const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -144,35 +249,63 @@ export class EmailService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${safeTitle}</title>
   </head>
-  <body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;">
+  <body style="margin:0;padding:0;background:#e8eef3;font-family:'Segoe UI',Arial,sans-serif;color:#0f172a;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${safePreview}</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,0.12);">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border-radius:28px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,0.16);">
             <tr>
-              <td style="padding:32px 40px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#ffffff;">
-                <p style="margin:0 0 12px;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;opacity:0.72;">${brandName}</p>
-                <h1 style="margin:0;font-size:30px;line-height:1.2;">${safeTitle}</h1>
+              <td style="padding:32px 40px;background:linear-gradient(135deg,#07131a,#10212d);color:#ffffff;">
+                <p style="margin:0 0 14px;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;opacity:0.7;">${brandName}</p>
+                <div style="display:inline-block;border-radius:999px;background:rgba(255,255,255,0.08);padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#f8fafc;">
+                  ${safeKicker}
+                </div>
+                <h1 style="margin:18px 0 0;font-size:32px;line-height:1.18;">${safeTitle}</h1>
               </td>
             </tr>
             <tr>
-              <td style="padding:36px 40px;">
-                <p style="margin:0 0 16px;font-size:18px;font-weight:700;">${safeGreeting}</p>
-                <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#334155;">${safeIntro}</p>
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+              <td style="padding:36px 40px 18px;">
+                <p style="margin:0 0 16px;font-size:18px;font-weight:700;color:#0f172a;">${safeGreeting}</p>
+                <p style="margin:0 0 28px;font-size:16px;line-height:1.8;color:#334155;">${safeIntro}</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
                   <tr>
-                    <td style="border-radius:999px;background:#0f766e;">
-                      <a href="${input.actionUrl}" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">
+                    <td style="border-radius:999px;background:${input.accentColor};">
+                      <a href="${input.actionUrl}" style="display:inline-block;padding:15px 26px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">
                         ${escapeHtml(input.actionLabel)}
                       </a>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#475569;">${safeExpiry}</p>
-                <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#475569;">Se o botão não abrir, copie e cole este link no navegador:</p>
-                <p style="margin:0 0 28px;font-size:13px;line-height:1.7;word-break:break-word;color:#0f766e;">${escapeHtml(input.actionUrl)}</p>
-                <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b;">${safeSupport}</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #e2e8f0;border-radius:22px;background:#f8fafc;">
+                  <tr>
+                    <td style="padding:22px 22px 20px;">
+                      <p style="margin:0 0 16px;font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#64748b;">
+                        O que acontece agora
+                      </p>
+                      ${highlightRows}
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-radius:22px;background:#fff7ed;border:1px solid #fed7aa;">
+                  <tr>
+                    <td style="padding:18px 20px;">
+                      <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#9a3412;">Prazo do link</p>
+                      <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#7c2d12;">${safeExpiry}</p>
+                      <p style="margin:0;font-size:14px;line-height:1.7;color:#7c2d12;">${safeSecurityNote}</p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 10px;font-size:14px;line-height:1.7;color:#475569;">Se o botao nao abrir, copie e cole este link no navegador:</p>
+                <p style="margin:0 0 28px;font-size:13px;line-height:1.8;word-break:break-word;color:${input.accentColor};">${escapeHtml(input.actionUrl)}</p>
+                <p style="margin:0 0 18px;font-size:13px;line-height:1.8;color:#64748b;">${safeSupport}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px 32px;">
+                <div style="border-top:1px solid #e2e8f0;padding-top:18px;font-size:12px;line-height:1.8;color:#94a3b8;">
+                  Este e-mail foi enviado automaticamente pela MetalGest para apoiar o acesso seguro da sua conta.
+                </div>
               </td>
             </tr>
           </table>
@@ -191,7 +324,12 @@ export class EmailService {
       '',
       `${input.actionLabel}: ${input.actionUrl}`,
       '',
+      'O que acontece agora:',
+      ...input.highlights.map((highlight) => `- ${highlight}`),
+      '',
       input.expiryText,
+      '',
+      input.securityNote,
       '',
       input.supportText,
     ].join('\n');
@@ -226,12 +364,14 @@ export class EmailService {
     let payload: Record<string, unknown> | null = null;
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeaders(),
+      };
+
       const response = await fetch(`${this.getApiUrl()}/emails/send`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.getApiKey(),
-        },
+        headers,
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(15000),
       });
@@ -302,22 +442,30 @@ export class EmailService {
     const confirmationUrl = this.buildFrontendLink('/verify-email', input.token);
     const template = this.buildActionEmailTemplate({
       preview: 'Confirme seu cadastro para liberar o acesso completo ao MetalGest.',
+      kicker: 'Confirmacao de cadastro',
       title: 'Confirme seu cadastro',
       greeting: `Ola, ${input.recipientName || 'cliente'}.`,
       intro:
-        'Seu acesso ao MetalGest ja foi criado. Agora falta apenas confirmar o email para liberar a entrada na plataforma e manter a seguranca da conta da sua metalurgica.',
+        'Seu acesso ao MetalGest ja foi criado. Falta apenas validar o endereco de e-mail para liberar a entrada na plataforma e manter a conta protegida.',
       actionLabel: 'Confirmar meu email',
       actionUrl: confirmationUrl,
       expiryText: 'Este link fica disponivel por 24 horas.',
-      supportText:
-        'Se voce nao solicitou este cadastro, ignore este email. Nenhuma alteracao sera feita sem a confirmacao do endereco.',
+      highlights: [
+        'Abra o link para confirmar que este endereco realmente pertence a sua empresa.',
+        'Depois da confirmacao, voce podera entrar normalmente pelo login da plataforma.',
+        'Se o prazo vencer, voce pode pedir um novo envio na tela de confirmacao.',
+      ],
+      securityNote:
+        'Se voce nao criou esta conta, ignore esta mensagem. Nenhum acesso sera liberado sem a confirmacao do endereco.',
+      supportText: 'Se precisar, volte ao login ou a pagina de confirmacao para solicitar um novo link.',
+      accentColor: '#b45309',
     });
 
     return this.sendTransactionalEmail({
       userId: input.userId,
       purpose: 'email_verification',
       toEmail: input.toEmail,
-      subject: 'Confirme seu cadastro na MetalGest',
+      subject: 'Confirme seu e-mail na MetalGest',
       html: template.html,
       text: template.text,
       metadata: {
@@ -331,22 +479,31 @@ export class EmailService {
     const resetUrl = this.buildFrontendLink('/reset-password', input.token);
     const template = this.buildActionEmailTemplate({
       preview: 'Recebemos um pedido para redefinir a senha da sua conta MetalGest.',
+      kicker: 'Recuperacao de senha',
       title: 'Redefinicao de senha',
       greeting: `Ola, ${input.recipientName || 'cliente'}.`,
       intro:
-        'Recebemos um pedido para trocar a senha da sua conta. Use o botao abaixo para criar uma nova senha e voltar a acessar a operacao da sua metalurgica com seguranca.',
+        'Recebemos um pedido para trocar a senha da sua conta. Use o botao abaixo para criar uma nova credencial e voltar a acessar a operacao com seguranca.',
       actionLabel: 'Criar nova senha',
       actionUrl: resetUrl,
       expiryText: 'Este link expira em 1 hora por seguranca.',
+      highlights: [
+        'Abra o formulario de redefinicao e crie uma nova senha forte.',
+        'Depois da troca, volte ao login com a nova credencial.',
+        'Se nao foi voce, basta ignorar esta mensagem.',
+      ],
+      securityNote:
+        'Sua senha atual continua valida ate que uma nova senha seja definida por este formulario.',
       supportText:
-        'Se voce nao pediu a troca de senha, ignore este email. A senha atual continuara valida ate que uma nova seja definida.',
+        'Se o link perder a validade, solicite um novo envio na pagina de recuperacao de senha.',
+      accentColor: '#0f766e',
     });
 
     return this.sendTransactionalEmail({
       userId: input.userId,
       purpose: 'password_reset',
       toEmail: input.toEmail,
-      subject: 'Redefina sua senha na MetalGest',
+      subject: 'Crie sua nova senha na MetalGest',
       html: template.html,
       text: template.text,
       metadata: {

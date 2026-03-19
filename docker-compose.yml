@@ -32,6 +32,17 @@ services:
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-this-refresh-secret-key}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3010,http://localhost:3000}
+      APP_DOMAIN: ${APP_DOMAIN:-metalgest.com.br}
+      APP_DOMAIN_WWW: ${APP_DOMAIN_WWW:-www.metalgest.com.br}
+      AUTH_REQUIRE_EMAIL_VERIFICATION: ${AUTH_REQUIRE_EMAIL_VERIFICATION:-true}
+      ULTRAZEND_API_URL: ${ULTRAZEND_API_URL:-https://www.ultrazend.com.br/api}
+      ULTRAZEND_FROM_EMAIL: ${ULTRAZEND_FROM_EMAIL:-}
+      ULTRAZEND_FROM_NAME: ${ULTRAZEND_FROM_NAME:-MetalGest}
+      ULTRAZEND_API_KEY: ${ULTRAZEND_API_KEY:-}
+      ULTRAZEND_ACCESS_TOKEN: ${ULTRAZEND_ACCESS_TOKEN:-}
+      ULTRAZEND_WEBHOOK_SECRET: ${ULTRAZEND_WEBHOOK_SECRET:-}
     expose:
       - "3001"
     volumes:

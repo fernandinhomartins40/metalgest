@@ -6,6 +6,8 @@ Importante:
 
 - o seed limpa os dados existentes antes de recriar os registros de teste
 - use estas contas apenas em ambiente de desenvolvimento, homologacao ou demonstracao
+- os emails `@metalgest.com` do seed nao sao caixas reais de entrega; eles servem para login e fluxo funcional
+- para validar recuperacao de senha por email ou confirmacao de cadastro, crie um usuario com um email real acessivel
 
 Para recriar os usuarios:
 

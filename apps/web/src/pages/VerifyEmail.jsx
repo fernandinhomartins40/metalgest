@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from "react"
-import { ArrowLeft, CheckCircle2, Loader2, MailCheck, RefreshCw } from "lucide-react"
+import {
+  ArrowLeft,
+  Loader2,
+  MailCheck,
+  RefreshCw,
+  ShieldCheck,
+  UserCheck2,
+} from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import AuthField from "../components/auth/AuthField"
+import AuthNotice from "../components/auth/AuthNotice"
+import AuthShell from "../components/auth/AuthShell"
 import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useToast } from "../components/ui/use-toast"
 import auth from "../services/auth"
 
@@ -16,8 +25,8 @@ function VerifyEmail() {
   const [status, setStatus] = useState(token ? "verifying" : "idle")
   const [message, setMessage] = useState(
     token
-      ? "Estamos validando o link enviado para o seu email."
-      : "Enviamos um link de confirmacao. Abra seu email e siga o passo indicado."
+      ? "Estamos validando o link enviado para o seu e-mail."
+      : "Enviamos um link de confirmacao. Abra sua caixa de entrada e siga o proximo passo."
   )
   const [isResending, setIsResending] = useState(false)
 
@@ -38,7 +47,7 @@ function VerifyEmail() {
         setStatus("success")
         setMessage(result.message)
         toast({
-          title: "Email confirmado",
+          title: "E-mail confirmado",
           description: result.message,
         })
       } catch (error) {
@@ -82,7 +91,7 @@ function VerifyEmail() {
       setStatus(result.alreadyVerified ? "success" : "idle")
       setMessage(result.message)
       toast({
-        title: result.alreadyVerified ? "Email ja confirmado" : "Link reenviado",
+        title: result.alreadyVerified ? "E-mail ja confirmado" : "Link reenviado",
         description: result.message,
       })
     } catch (error) {
@@ -98,80 +107,101 @@ function VerifyEmail() {
     }
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
-      <Card className="w-full max-w-md border-0 shadow-xl">
-        <CardHeader className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Confirmar email</CardTitle>
-          <CardDescription>
-            Este passo protege o acesso da sua empresa e garante que os avisos importantes cheguem ao responsavel certo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div
-            className={`rounded-lg border px-4 py-4 text-sm ${
-              status === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : status === "error"
-                  ? "border-red-200 bg-red-50 text-red-800"
-                  : "border-slate-200 bg-slate-50 text-slate-700"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              {status === "verifying" ? (
-                <Loader2 className="mt-0.5 h-4 w-4 animate-spin" />
-              ) : status === "success" ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4" />
-              ) : (
-                <MailCheck className="mt-0.5 h-4 w-4" />
-              )}
-              <span>{message}</span>
-            </div>
-          </div>
+  const noticeTone =
+    status === "success" ? "success" : status === "error" ? "error" : status === "verifying" ? "neutral" : "warning"
 
-          {status === "success" ? (
-            <Button className="w-full" onClick={() => navigate("/login")}>
+  return (
+    <AuthShell
+      pageLabel="Confirmacao do cadastro"
+      pageTitle="Valide o e-mail antes de liberar o primeiro acesso."
+      pageDescription="O cadastro da empresa ja existe, mas a conta so fica pronta depois da confirmacao do endereco responsavel."
+      panelBadge="Depois do cadastro"
+      panelTitle="Mesmo fluxo no e-mail e na interface"
+      panelDescription="Quem acabou de criar a conta recebe um template de confirmacao com link direto para esta tela. Se o prazo passar, o proprio usuario pode pedir um novo envio."
+      panelItems={[
+        {
+          icon: MailCheck,
+          title: "Clique unico",
+          description: "O link abre esta pagina e dispara a validacao imediatamente quando o token esta presente.",
+        },
+        {
+          icon: UserCheck2,
+          title: "Cadastro liberado",
+          description: "Depois da confirmacao, a conta fica pronta para entrar normalmente pelo login.",
+        },
+        {
+          icon: ShieldCheck,
+          title: "Reenvio controlado",
+          description: "Se o link expirar, o usuario pode reenviar uma nova confirmacao informando o e-mail da conta.",
+        },
+      ]}
+      panelFooter="Se o e-mail nao aparecer na caixa principal, verifique spam e promocoes antes de pedir novo envio."
+      cardBadge="Confirmar e-mail"
+      cardTitle={status === "success" ? "Cadastro confirmado" : "Validar cadastro"}
+      cardDescription="Este passo garante que os avisos importantes da conta cheguem ao responsavel correto."
+    >
+      <div className="space-y-5">
+        <AuthNotice tone={noticeTone} title="Status da confirmacao">
+          <span className={status === "verifying" ? "inline-flex items-center gap-2" : undefined}>
+            {status === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {message}
+          </span>
+        </AuthNotice>
+
+        {status === "success" ? (
+          <div className="space-y-3">
+            <Button
+              className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+              onClick={() => navigate("/login")}
+            >
               Ir para o login
             </Button>
-          ) : (
-            <form className="space-y-4" onSubmit={handleResend}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                  E-mail da conta
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  placeholder="voce@empresa.com.br"
-                  required
-                />
-              </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full rounded-2xl border-slate-200"
+              onClick={() => navigate("/register")}
+            >
+              Criar outra conta
+            </Button>
+          </div>
+        ) : (
+          <form className="space-y-5" onSubmit={handleResend}>
+            <AuthField
+              id="email"
+              name="email"
+              type="email"
+              label="E-mail da conta"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              placeholder="voce@empresa.com.br"
+              hint="Use o mesmo e-mail informado no cadastro para reenviar a confirmacao."
+              required
+            />
 
-              <Button type="submit" className="w-full gap-2" disabled={isResending}>
-                <RefreshCw className={`h-4 w-4 ${isResending ? "animate-spin" : ""}`} />
-                {isResending ? "Reenviando..." : "Reenviar confirmacao"}
-              </Button>
-            </form>
-          )}
+            <Button
+              type="submit"
+              className="h-12 w-full gap-2 rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+              disabled={isResending}
+            >
+              <RefreshCw className={`h-4 w-4 ${isResending ? "animate-spin" : ""}`} />
+              {isResending ? "Reenviando..." : "Reenviar confirmacao"}
+            </Button>
+          </form>
+        )}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full gap-2"
-            onClick={() => navigate("/login")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar ao login
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full rounded-2xl border-slate-200"
+          onClick={() => navigate("/login")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar ao login
+        </Button>
+      </div>
+    </AuthShell>
   )
 }
 

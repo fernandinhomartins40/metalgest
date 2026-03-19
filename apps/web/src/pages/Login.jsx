@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react"
+import { ArrowRight, KeyRound, LogIn, MailCheck, ShieldCheck } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { LogIn } from "lucide-react"
+import AuthField from "../components/auth/AuthField"
+import AuthNotice from "../components/auth/AuthNotice"
+import AuthShell from "../components/auth/AuthShell"
 import PasswordInput from "../components/auth/PasswordInput"
 import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
 import auth from "../services/auth"
@@ -77,84 +79,110 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
-      <Card className="w-full max-w-md border-0 shadow-xl">
-        <CardHeader className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Acessar plataforma</CardTitle>
-          <CardDescription>Entre com a sua conta para continuar gerenciando a operacao.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                E-mail
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                autoComplete="email"
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                required
-              />
-            </div>
+    <AuthShell
+      pageLabel="Acesso da operacao"
+      pageTitle="Entre e continue de onde a sua metalurgica parou."
+      pageDescription="Login, recuperacao de senha e confirmacao de e-mail agora seguem o mesmo fluxo. O usuario recebe o link certo e cai direto na tela certa."
+      panelBadge="Fluxo publico"
+      panelTitle="Acesso mais claro, sem suporte manual"
+      panelDescription="O MetalGest agora orienta a entrada da conta com a mesma logica usada nos e-mails transacionais. Quem esquece a senha ou ainda nao confirmou o cadastro nao fica preso no meio do caminho."
+      panelItems={[
+        {
+          icon: ShieldCheck,
+          title: "Sessao segura",
+          description: "A autenticacao continua protegida por token e a conta so libera acesso completo apos confirmacao.",
+        },
+        {
+          icon: KeyRound,
+          title: "Recuperacao direta",
+          description: "O usuario pede um novo link e chega no formulario de troca de senha sem depender do suporte.",
+        },
+        {
+          icon: MailCheck,
+          title: "Cadastro validado",
+          description: "Se o e-mail ainda nao foi confirmado, o sistema reenvia a verificacao e aponta a proxima acao.",
+        },
+      ]}
+      panelFooter="Se o responsavel pela conta estiver acessando pela primeira vez, crie o cadastro e confirme o e-mail antes de entrar na area interna."
+      cardBadge="Entrar"
+      cardTitle="Acessar plataforma"
+      cardDescription="Use o e-mail cadastrado para entrar no painel da MetalGest."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <AuthField
+          id="email"
+          name="email"
+          label="E-mail"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          autoComplete="email"
+          placeholder="voce@empresa.com.br"
+          hint="Este e-mail tambem recebe os links de confirmacao e recuperacao."
+          required
+        />
 
-            <PasswordInput
-              id="password"
-              name="password"
-              label="Senha"
-              value={form.password}
-              onChange={handleChange}
-              required
-              autoComplete="current-password"
-            />
+        <PasswordInput
+          id="password"
+          name="password"
+          label="Senha"
+          value={form.password}
+          onChange={handleChange}
+          required
+          autoComplete="current-password"
+          hint="Se perdeu o acesso, solicite um novo link logo abaixo."
+        />
 
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                <input
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={form.rememberMe}
-                  onChange={handleChange}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                />
-                <span>
-                  <span className="block font-medium text-slate-800">Manter conectado</span>
-                  <span className="block text-slate-500">
-                    Mantem sua sessao ativa neste dispositivo mesmo apos fechar o navegador.
-                  </span>
-                </span>
-              </label>
+        <AuthNotice tone="neutral" title="Lembrete">
+          Se esta conta ainda nao foi confirmada, o login redireciona voce para a validacao do e-mail e pode reenviar o link automaticamente.
+        </AuthNotice>
 
-              <button
-                type="button"
-                className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-                onClick={() => navigate("/forgot-password")}
-              >
-                Esqueci minha senha
-              </button>
-            </div>
+        <label className="flex items-start gap-3 rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-4 text-sm text-slate-700">
+          <input
+            name="rememberMe"
+            type="checkbox"
+            checked={form.rememberMe}
+            onChange={handleChange}
+            className="mt-1 h-4 w-4 rounded border-slate-300"
+          />
+          <span>
+            <span className="block font-semibold text-slate-800">Manter conectado neste dispositivo</span>
+            <span className="mt-1 block leading-6 text-slate-500">
+              Ideal para o computador da empresa. Evite em maquinas compartilhadas.
+            </span>
+          </span>
+        </label>
 
-            <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
-              <LogIn className="h-4 w-4" />
-              {isSubmitting ? "Entrando..." : "Entrar"}
-            </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button
+            type="submit"
+            className="h-12 flex-1 gap-2 rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+            disabled={isSubmitting}
+          >
+            <LogIn className="h-4 w-4" />
+            {isSubmitting ? "Entrando..." : "Entrar na plataforma"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-2xl border-slate-200 px-5"
+            onClick={() => navigate("/forgot-password")}
+          >
+            Esqueci minha senha
+          </Button>
+        </div>
 
-            <Button
-              type="button"
-              variant="link"
-              className="w-full"
-              onClick={() => navigate("/register")}
-            >
-              Criar conta
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-11 w-full justify-between rounded-2xl border border-transparent px-4 text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+          onClick={() => navigate("/register")}
+        >
+          Criar conta
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </form>
+    </AuthShell>
   )
 }
 

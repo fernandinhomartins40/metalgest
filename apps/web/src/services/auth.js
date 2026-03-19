@@ -4,6 +4,19 @@ const STORAGE_KEYS = {
   LOGIN_HINT: "metalgest_login_hint",
 }
 
+const AUTH_ERROR_MESSAGES = {
+  ACCOUNT_INACTIVE: "Esta conta esta inativa.",
+  DUPLICATE_EMAIL: "Este e-mail ja esta cadastrado.",
+  EMAIL_NOT_VERIFIED: "Seu cadastro ainda nao foi confirmado. Enviamos um novo link para o seu e-mail.",
+  EMAIL_SERVICE_UNAVAILABLE:
+    "O servico de e-mail esta indisponivel no momento. Tente novamente em instantes.",
+  INVALID_CREDENTIALS: "E-mail ou senha invalidos.",
+  INVALID_PASSWORD: "A senha atual informada nao confere.",
+  INVALID_PASSWORD_FORMAT:
+    "Use ao menos 8 caracteres com maiuscula, minuscula, numero e simbolo.",
+  INVALID_TOKEN: "Este link e invalido ou expirou. Solicite um novo envio.",
+}
+
 const getUserStorage = () => {
   if (typeof window === "undefined") {
     return null
@@ -72,9 +85,16 @@ const getSavedCredentials = () => {
   }
 }
 
-const createError = (response, fallbackMessage) => {
-  const error = new Error(response?.error?.message || fallbackMessage)
-  error.code = response?.error?.code
+const resolveMessage = (code, defaultMessage, overrideMessages = {}) => {
+  return overrideMessages[code] || AUTH_ERROR_MESSAGES[code] || defaultMessage
+}
+
+const createError = (response, fallbackMessage, overrideMessages = {}) => {
+  const code = response?.error?.code
+  const error = new Error(
+    resolveMessage(code, response?.error?.message || fallbackMessage, overrideMessages)
+  )
+  error.code = code
   error.status = response?.error?.status
   error.details = response?.error?.details
   return error
@@ -103,7 +123,7 @@ export const AuthService = {
     const response = await httpClient.post("/auth/login", { email, password, rememberMe })
 
     if (!response.success) {
-      throw createError(response, "Login failed")
+      throw createError(response, "Nao foi possivel entrar na conta.")
     }
 
     TokenManager.setAccessToken(response.data.accessToken, rememberMe)
@@ -127,7 +147,7 @@ export const AuthService = {
     const response = await httpClient.post("/auth/register", { name, email, password, rememberMe })
 
     if (!response.success) {
-      throw createError(response, "Registration failed")
+      throw createError(response, "Nao foi possivel concluir o cadastro.")
     }
 
     const verificationRequired = Boolean(response.data.verificationRequired)
@@ -145,7 +165,11 @@ export const AuthService = {
       user: response.data.user,
       verificationRequired,
       emailDispatched: Boolean(response.data.emailDispatched),
-      message: response.data.message,
+      message: verificationRequired
+        ? response.data.emailDispatched
+          ? "Conta criada. Enviamos um link para confirmar o seu e-mail."
+          : "Conta criada, mas nao foi possivel enviar o e-mail de confirmacao."
+        : "Conta criada com sucesso.",
     }
   },
 
@@ -183,7 +207,7 @@ export const AuthService = {
     const response = await httpClient.put("/auth/profile", userData)
 
     if (!response.success) {
-      throw createError(response, "Profile update failed")
+      throw createError(response, "Nao foi possivel atualizar o perfil.")
     }
 
     saveUser(response.data)
@@ -200,12 +224,12 @@ export const AuthService = {
     })
 
     if (!response.success) {
-      throw createError(response, "Password change failed")
+      throw createError(response, "Nao foi possivel alterar a senha.")
     }
 
     return {
       success: true,
-      message: response.data.message || "Password changed successfully",
+      message: response.data.message || "Senha alterada com sucesso.",
     }
   },
 
@@ -213,7 +237,7 @@ export const AuthService = {
     const response = await httpClient.post("/auth/forgot-password", { email })
 
     if (!response.success) {
-      throw createError(response, "Password recovery request failed")
+      throw createError(response, "Nao foi possivel solicitar a recuperacao de senha.")
     }
 
     const recoveryAvailable = response.data.recoveryAvailable !== false
@@ -233,7 +257,7 @@ export const AuthService = {
     const response = await httpClient.post("/auth/reset-password", { token, password })
 
     if (!response.success) {
-      throw createError(response, "Password reset failed")
+      throw createError(response, "Nao foi possivel redefinir a senha.")
     }
 
     TokenManager.clearTokens()
@@ -241,7 +265,7 @@ export const AuthService = {
 
     return {
       success: true,
-      message: response.data.message || "Password updated successfully",
+      message: "Sua senha foi atualizada com sucesso.",
     }
   },
 
@@ -249,13 +273,13 @@ export const AuthService = {
     const response = await httpClient.post("/auth/verify-email", { token })
 
     if (!response.success) {
-      throw createError(response, "Email verification failed")
+      throw createError(response, "Nao foi possivel confirmar o e-mail.")
     }
 
     return {
       success: true,
       user: response.data.user,
-      message: response.data.message || "Email verified successfully",
+      message: "E-mail confirmado com sucesso. Agora voce ja pode entrar na plataforma.",
     }
   },
 
@@ -263,13 +287,15 @@ export const AuthService = {
     const response = await httpClient.post("/auth/resend-verification", { email })
 
     if (!response.success) {
-      throw createError(response, "Verification email request failed")
+      throw createError(response, "Nao foi possivel reenviar a confirmacao.")
     }
 
     return {
       success: true,
       alreadyVerified: Boolean(response.data.alreadyVerified),
-      message: response.data.message || "Verification email sent successfully",
+      message: response.data.alreadyVerified
+        ? "Este e-mail ja esta confirmado. Entre normalmente com a sua conta."
+        : "Reenviamos um novo link de confirmacao para o seu e-mail.",
     }
   },
 

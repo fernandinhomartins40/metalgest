@@ -51,13 +51,11 @@ export const logger = winston.createLogger({
   ],
 });
 
-// Add console transport in development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: consoleFormat,
-    })
-  );
-}
+// Also write logs to stdout so container logs stay useful in production.
+logger.add(
+  new winston.transports.Console({
+    format: process.env.NODE_ENV === 'production' ? logFormat : consoleFormat,
+  })
+);
 
 export default logger;

@@ -1,5 +1,6 @@
 import app from '@/app';
 import { corsAllowedOrigins } from '@/config/cors';
+import { emailService } from '@/services/email.service';
 import { logger } from '@/utils/logger';
 import { prisma } from '@/config/database';
 
@@ -22,6 +23,7 @@ const server = app.listen(PORT, () => {
   logger.info(`MetalGest API Server running on http://${HOST}:${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`CORS enabled for: ${corsAllowedOrigins.join(', ')}`);
+  logger.info('UltraZend integration summary', emailService.getConfigurationSummary());
 });
 
 export default server;

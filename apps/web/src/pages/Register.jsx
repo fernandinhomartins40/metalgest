@@ -1,9 +1,12 @@
 import React, { useMemo, useState } from "react"
+import { ArrowLeft, Building2, MailCheck, ShieldCheck, UserPlus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, UserPlus } from "lucide-react"
+import AuthField from "../components/auth/AuthField"
+import AuthNotice from "../components/auth/AuthNotice"
+import AuthShell from "../components/auth/AuthShell"
 import PasswordInput from "../components/auth/PasswordInput"
+import PasswordRequirements from "../components/auth/PasswordRequirements"
 import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
 import auth from "../services/auth"
@@ -12,19 +15,16 @@ const strengthScale = [
   {
     limit: 0.4,
     label: "Fraca",
-    barClassName: "bg-red-500",
-    textClassName: "text-red-600",
+    textClassName: "text-amber-600",
   },
   {
     limit: 0.8,
     label: "Media",
-    barClassName: "bg-amber-500",
-    textClassName: "text-amber-600",
+    textClassName: "text-orange-600",
   },
   {
     limit: 1,
     label: "Forte",
-    barClassName: "bg-emerald-500",
     textClassName: "text-emerald-600",
   },
 ]
@@ -44,7 +44,7 @@ function Register() {
   const passwordValidation = useMemo(() => auth.validatePassword(form.password), [form.password])
   const passwordStrength =
     strengthScale.find((item) => passwordValidation.strength <= item.limit) || strengthScale[2]
-  const strengthPercent = Math.max(passwordValidation.strength * 100, form.password ? 12 : 0)
+  const strengthPercent = form.password ? Math.max(passwordValidation.strength * 100, 12) : 0
   const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword
   const canSubmit =
     form.name.trim().length >= 2 &&
@@ -118,124 +118,122 @@ function Register() {
   ]
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
-      <Card className="w-full max-w-lg border-0 shadow-xl">
-        <CardHeader className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Criar sua conta</CardTitle>
-          <CardDescription>
-            Cadastre o primeiro acesso da empresa e confirme o e-mail para liberar a operacao.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="name">
-                  Nome
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  autoComplete="name"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  required
-                />
-              </div>
+    <AuthShell
+      pageLabel="Primeiro acesso"
+      pageTitle="Cadastre a empresa e confirme o e-mail do responsavel."
+      pageDescription="O cadastro cria a conta inicial da operacao. Depois disso, o sistema envia a confirmacao de e-mail e libera o acesso completo."
+      panelBadge="Novo onboarding"
+      panelTitle="Cadastro alinhado ao envio transacional"
+      panelDescription="A confirmacao apos o cadastro faz parte do fluxo padrao. O usuario cria a conta, recebe o template certo e valida o e-mail antes de entrar na area interna."
+      panelItems={[
+        {
+          icon: Building2,
+          title: "Conta inicial da empresa",
+          description: "Este formulario cria o primeiro usuario administrador da operacao.",
+        },
+        {
+          icon: MailCheck,
+          title: "Confirmacao apos cadastro",
+          description: "Se a verificacao estiver ativa, um e-mail com link direto e enviado imediatamente.",
+        },
+        {
+          icon: ShieldCheck,
+          title: "Senha forte desde o inicio",
+          description: "A conta nasce com politica de senha mais rigida e feedback visual em tempo real.",
+        },
+      ]}
+      panelFooter="Use um e-mail real e acessivel. Ele sera o canal para recuperar senha, confirmar cadastro e receber avisos importantes."
+      cardBadge="Criar conta"
+      cardTitle="Cadastrar responsavel"
+      cardDescription="Preencha os dados do primeiro acesso administrativo da sua empresa."
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <AuthNotice tone="neutral" title="Importante">
+          Ao concluir o cadastro, voce pode precisar confirmar o e-mail antes de entrar na plataforma.
+        </AuthNotice>
 
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                  E-mail
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  required
-                />
-              </div>
+        <div className="grid gap-5">
+          <AuthField
+            id="name"
+            name="name"
+            label="Nome do responsavel"
+            value={form.name}
+            onChange={handleChange}
+            autoComplete="name"
+            placeholder="Nome e sobrenome"
+            required
+          />
 
-              <PasswordInput
-                id="password"
-                name="password"
-                label="Senha"
-                value={form.password}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-              />
+          <AuthField
+            id="email"
+            name="email"
+            type="email"
+            label="E-mail"
+            value={form.email}
+            onChange={handleChange}
+            autoComplete="email"
+            placeholder="voce@empresa.com.br"
+            hint="Este endereco sera usado para confirmar cadastro e recuperar senha."
+            required
+          />
 
-              <PasswordInput
-                id="confirmPassword"
-                name="confirmPassword"
-                label="Confirmar senha"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-                error={
-                  form.confirmPassword && form.confirmPassword !== form.password
-                    ? "As senhas informadas nao conferem."
-                    : ""
-                }
-              />
-            </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <PasswordInput
+              id="password"
+              name="password"
+              label="Senha"
+              value={form.password}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+            />
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-700">Forca da senha</p>
-                <span
-                  className={`text-sm font-semibold ${
-                    form.password ? passwordStrength.textClassName : "text-slate-400"
-                  }`}
-                >
-                  {form.password ? passwordStrength.label : "Aguardando senha"}
-                </span>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    form.password ? passwordStrength.barClassName : "bg-slate-300"
-                  }`}
-                  style={{ width: `${strengthPercent}%` }}
-                />
-              </div>
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                {checks.map(([label, passed]) => (
-                  <li key={label} className={passed ? "text-emerald-700" : "text-slate-500"}>
-                    {passed ? "OK" : "Pendente"}
-                    {" \u00b7 "}
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <PasswordInput
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirmar senha"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+              error={
+                form.confirmPassword && form.confirmPassword !== form.password
+                  ? "As senhas informadas nao conferem."
+                  : ""
+              }
+            />
+          </div>
+        </div>
 
-            <div className="flex flex-col gap-3 md:flex-row">
-              <Button type="submit" className="flex-1 gap-2" disabled={!canSubmit}>
-                <UserPlus className="h-4 w-4" />
-                {isSubmitting ? "Criando..." : "Criar conta"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={() => navigate("/login")}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar ao login
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <PasswordRequirements
+          strengthLabel={form.password ? passwordStrength.label : "Aguardando senha"}
+          strengthClassName={form.password ? passwordStrength.textClassName : "text-slate-400"}
+          strengthPercent={strengthPercent}
+          checks={checks}
+          footer="A senha precisa atender a todos os requisitos antes de liberar o cadastro."
+        />
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button
+            type="submit"
+            className="h-12 flex-1 gap-2 rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+            disabled={!canSubmit}
+          >
+            <UserPlus className="h-4 w-4" />
+            {isSubmitting ? "Criando..." : "Criar conta"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-2xl border-slate-200 px-5"
+            onClick={() => navigate("/login")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao login
+          </Button>
+        </div>
+      </form>
+    </AuthShell>
   )
 }
 
