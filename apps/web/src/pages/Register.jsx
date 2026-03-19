@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from "react"
-import { ArrowLeft, Building2, MailCheck, ShieldCheck, UserPlus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import AuthField from "../components/auth/AuthField"
-import AuthNotice from "../components/auth/AuthNotice"
-import AuthShell from "../components/auth/AuthShell"
 import PasswordInput from "../components/auth/PasswordInput"
-import PasswordRequirements from "../components/auth/PasswordRequirements"
 import { Button } from "../components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
 import auth from "../services/auth"
@@ -15,12 +13,12 @@ const strengthScale = [
   {
     limit: 0.4,
     label: "Fraca",
-    textClassName: "text-amber-600",
+    textClassName: "text-red-600",
   },
   {
     limit: 0.8,
     label: "Media",
-    textClassName: "text-orange-600",
+    textClassName: "text-amber-600",
   },
   {
     limit: 1,
@@ -44,7 +42,6 @@ function Register() {
   const passwordValidation = useMemo(() => auth.validatePassword(form.password), [form.password])
   const passwordStrength =
     strengthScale.find((item) => passwordValidation.strength <= item.limit) || strengthScale[2]
-  const strengthPercent = form.password ? Math.max(passwordValidation.strength * 100, 12) : 0
   const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword
   const canSubmit =
     form.name.trim().length >= 2 &&
@@ -118,66 +115,53 @@ function Register() {
   ]
 
   return (
-    <AuthShell
-      pageLabel="Primeiro acesso"
-      pageTitle="Cadastre a empresa e confirme o e-mail do responsavel."
-      pageDescription="O cadastro cria a conta inicial da operacao. Depois disso, o sistema envia a confirmacao de e-mail e libera o acesso completo."
-      panelBadge="Novo onboarding"
-      panelTitle="Cadastro alinhado ao envio transacional"
-      panelDescription="A confirmacao apos o cadastro faz parte do fluxo padrao. O usuario cria a conta, recebe o template certo e valida o e-mail antes de entrar na area interna."
-      panelItems={[
-        {
-          icon: Building2,
-          title: "Conta inicial da empresa",
-          description: "Este formulario cria o primeiro usuario administrador da operacao.",
-        },
-        {
-          icon: MailCheck,
-          title: "Confirmacao apos cadastro",
-          description: "Se a verificacao estiver ativa, um e-mail com link direto e enviado imediatamente.",
-        },
-        {
-          icon: ShieldCheck,
-          title: "Senha forte desde o inicio",
-          description: "A conta nasce com politica de senha mais rigida e feedback visual em tempo real.",
-        },
-      ]}
-      panelFooter="Use um e-mail real e acessivel. Ele sera o canal para recuperar senha, confirmar cadastro e receber avisos importantes."
-      cardBadge="Criar conta"
-      cardTitle="Cadastrar responsavel"
-      cardDescription="Preencha os dados do primeiro acesso administrativo da sua empresa."
-    >
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <AuthNotice tone="neutral" title="Importante">
-          Ao concluir o cadastro, voce pode precisar confirmar o e-mail antes de entrar na plataforma.
-        </AuthNotice>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
+          <CardTitle>Criar conta</CardTitle>
+          <CardDescription>Cadastre o primeiro acesso da empresa.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <Alert>
+              <AlertTitle>Confirmacao de e-mail</AlertTitle>
+              <AlertDescription>
+                Depois do cadastro, o sistema pode solicitar a confirmacao do e-mail antes do login.
+              </AlertDescription>
+            </Alert>
 
-        <div className="grid gap-5">
-          <AuthField
-            id="name"
-            name="name"
-            label="Nome do responsavel"
-            value={form.name}
-            onChange={handleChange}
-            autoComplete="name"
-            placeholder="Nome e sobrenome"
-            required
-          />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="name">
+                Nome do responsavel
+              </label>
+              <Input
+                id="name"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                autoComplete="name"
+                placeholder="Nome e sobrenome"
+                required
+              />
+            </div>
 
-          <AuthField
-            id="email"
-            name="email"
-            type="email"
-            label="E-mail"
-            value={form.email}
-            onChange={handleChange}
-            autoComplete="email"
-            placeholder="voce@empresa.com.br"
-            hint="Este endereco sera usado para confirmar cadastro e recuperar senha."
-            required
-          />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="email">
+                E-mail
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+                placeholder="voce@empresa.com.br"
+                required
+              />
+            </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
             <PasswordInput
               id="password"
               name="password"
@@ -202,38 +186,34 @@ function Register() {
                   : ""
               }
             />
-          </div>
-        </div>
 
-        <PasswordRequirements
-          strengthLabel={form.password ? passwordStrength.label : "Aguardando senha"}
-          strengthClassName={form.password ? passwordStrength.textClassName : "text-slate-400"}
-          strengthPercent={strengthPercent}
-          checks={checks}
-          footer="A senha precisa atender a todos os requisitos antes de liberar o cadastro."
-        />
+            <div className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-700">Forca da senha</p>
+                <span className={`text-sm font-medium ${form.password ? passwordStrength.textClassName : "text-slate-500"}`}>
+                  {form.password ? passwordStrength.label : "Aguardando"}
+                </span>
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                {checks.map(([label, passed]) => (
+                  <li key={label}>
+                    {passed ? "OK" : "Pendente"} - {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            type="submit"
-            className="h-12 flex-1 gap-2 rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
-            disabled={!canSubmit}
-          >
-            <UserPlus className="h-4 w-4" />
-            {isSubmitting ? "Criando..." : "Criar conta"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 rounded-2xl border-slate-200 px-5"
-            onClick={() => navigate("/login")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao login
-          </Button>
-        </div>
-      </form>
-    </AuthShell>
+            <Button type="submit" className="w-full" disabled={!canSubmit}>
+              {isSubmitting ? "Criando..." : "Criar conta"}
+            </Button>
+
+            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
+              Voltar ao login
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react"
-import { ArrowRight, KeyRound, LogIn, MailCheck, ShieldCheck } from "lucide-react"
 import { useLocation, useNavigate } from "react-router-dom"
-import AuthField from "../components/auth/AuthField"
-import AuthNotice from "../components/auth/AuthNotice"
-import AuthShell from "../components/auth/AuthShell"
 import PasswordInput from "../components/auth/PasswordInput"
 import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
 import auth from "../services/auth"
@@ -79,110 +77,69 @@ function Login() {
   }
 
   return (
-    <AuthShell
-      pageLabel="Acesso da operacao"
-      pageTitle="Entre e continue de onde a sua metalurgica parou."
-      pageDescription="Login, recuperacao de senha e confirmacao de e-mail agora seguem o mesmo fluxo. O usuario recebe o link certo e cai direto na tela certa."
-      panelBadge="Fluxo publico"
-      panelTitle="Acesso mais claro, sem suporte manual"
-      panelDescription="O MetalGest agora orienta a entrada da conta com a mesma logica usada nos e-mails transacionais. Quem esquece a senha ou ainda nao confirmou o cadastro nao fica preso no meio do caminho."
-      panelItems={[
-        {
-          icon: ShieldCheck,
-          title: "Sessao segura",
-          description: "A autenticacao continua protegida por token e a conta so libera acesso completo apos confirmacao.",
-        },
-        {
-          icon: KeyRound,
-          title: "Recuperacao direta",
-          description: "O usuario pede um novo link e chega no formulario de troca de senha sem depender do suporte.",
-        },
-        {
-          icon: MailCheck,
-          title: "Cadastro validado",
-          description: "Se o e-mail ainda nao foi confirmado, o sistema reenvia a verificacao e aponta a proxima acao.",
-        },
-      ]}
-      panelFooter="Se o responsavel pela conta estiver acessando pela primeira vez, crie o cadastro e confirme o e-mail antes de entrar na area interna."
-      cardBadge="Entrar"
-      cardTitle="Acessar plataforma"
-      cardDescription="Use o e-mail cadastrado para entrar no painel da MetalGest."
-    >
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <AuthField
-          id="email"
-          name="email"
-          label="E-mail"
-          type="email"
-          value={form.email}
-          onChange={handleChange}
-          autoComplete="email"
-          placeholder="voce@empresa.com.br"
-          hint="Este e-mail tambem recebe os links de confirmacao e recuperacao."
-          required
-        />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
+          <CardTitle>Acessar plataforma</CardTitle>
+          <CardDescription>Entre com o e-mail cadastrado para continuar.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="email">
+                E-mail
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+                placeholder="voce@empresa.com.br"
+                required
+              />
+            </div>
 
-        <PasswordInput
-          id="password"
-          name="password"
-          label="Senha"
-          value={form.password}
-          onChange={handleChange}
-          required
-          autoComplete="current-password"
-          hint="Se perdeu o acesso, solicite um novo link logo abaixo."
-        />
+            <PasswordInput
+              id="password"
+              name="password"
+              label="Senha"
+              value={form.password}
+              onChange={handleChange}
+              required
+              autoComplete="current-password"
+            />
 
-        <AuthNotice tone="neutral" title="Lembrete">
-          Se esta conta ainda nao foi confirmada, o login redireciona voce para a validacao do e-mail e pode reenviar o link automaticamente.
-        </AuthNotice>
+            <div className="flex items-center justify-between gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  name="rememberMe"
+                  type="checkbox"
+                  checked={form.rememberMe}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Manter conectado
+              </label>
 
-        <label className="flex items-start gap-3 rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-4 text-sm text-slate-700">
-          <input
-            name="rememberMe"
-            type="checkbox"
-            checked={form.rememberMe}
-            onChange={handleChange}
-            className="mt-1 h-4 w-4 rounded border-slate-300"
-          />
-          <span>
-            <span className="block font-semibold text-slate-800">Manter conectado neste dispositivo</span>
-            <span className="mt-1 block leading-6 text-slate-500">
-              Ideal para o computador da empresa. Evite em maquinas compartilhadas.
-            </span>
-          </span>
-        </label>
+              <Button type="button" variant="link" className="h-auto px-0" onClick={() => navigate("/forgot-password")}>
+                Esqueci minha senha
+              </Button>
+            </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            type="submit"
-            className="h-12 flex-1 gap-2 rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
-            disabled={isSubmitting}
-          >
-            <LogIn className="h-4 w-4" />
-            {isSubmitting ? "Entrando..." : "Entrar na plataforma"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 rounded-2xl border-slate-200 px-5"
-            onClick={() => navigate("/forgot-password")}
-          >
-            Esqueci minha senha
-          </Button>
-        </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Entrando..." : "Entrar"}
+            </Button>
 
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-11 w-full justify-between rounded-2xl border border-transparent px-4 text-slate-700 hover:border-slate-200 hover:bg-slate-50"
-          onClick={() => navigate("/register")}
-        >
-          Criar conta
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </form>
-    </AuthShell>
+            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/register")}>
+              Criar conta
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
