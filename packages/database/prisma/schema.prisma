@@ -28,6 +28,11 @@ enum SubscriptionStatus {
   TRIAL
 }
 
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum ClientType {
   INDIVIDUAL
   BUSINESS
@@ -91,6 +96,8 @@ model User {
   updatedAt             DateTime           @updatedAt
 
   refreshTokens RefreshToken[]
+  authTokens    AuthToken[]
+  outboundEmails OutboundEmail[]
   clients       Client[]
   products      Product[]
   services      Service[]
@@ -114,6 +121,80 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model AuthToken {
+  id         String        @id @default(uuid())
+  userId     String
+  type       AuthTokenType
+  tokenHash  String        @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("auth_tokens")
+}
+
+model OutboundEmail {
+  id                String    @id @default(uuid())
+  userId            String?
+  provider          String    @default("ultrazend")
+  purpose           String
+  toEmail           String
+  fromEmail         String
+  subject           String
+  status            String    @default("queued")
+  providerMessageId String?
+  providerEmailId   String?
+  trackingId        String?
+  errorMessage      String?
+  metadata          Json?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user   User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  events EmailWebhookEvent[]
+
+  @@index([userId])
+  @@index([purpose])
+  @@index([providerMessageId])
+  @@index([providerEmailId])
+  @@index([trackingId])
+  @@map("outbound_emails")
+}
+
+model EmailWebhookEvent {
+  id                String   @id @default(uuid())
+  outboundEmailId   String?
+  providerEventKey  String   @unique
+  webhookId         String?
+  event             String
+  signature         String?
+  providerMessageId String?
+  providerEmailId   String?
+  trackingId        String?
+  payload           Json
+  receivedAt        DateTime @default(now())
+  processedAt       DateTime?
+
+  outboundEmail OutboundEmail? @relation(fields: [outboundEmailId], references: [id], onDelete: SetNull)
+
+  @@index([outboundEmailId])
+  @@index([event])
+  @@index([providerMessageId])
+  @@index([providerEmailId])
+  @@index([trackingId])
+  @@map("email_webhook_events")
 }
 
 model Client {

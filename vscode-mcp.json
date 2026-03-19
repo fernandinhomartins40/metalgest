@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "ultrazend": {
+      "type": "http",
+      "url": "https://www.ultrazend.com.br/api/ai/mcp",
+      "headers": {
+        "x-api-key": "${env:ULTRAZEND_AI_AGENT_KEY}"
+      }
+    }
+  }
+}

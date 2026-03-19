@@ -25,7 +25,14 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
-app.use(express.json({ limit: '10mb' }));
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, _res, buffer) => {
+      (req as express.Request).rawBody = buffer.toString('utf8');
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 

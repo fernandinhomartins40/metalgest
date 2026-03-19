@@ -1,4 +1,29 @@
 const API_URL = import.meta.env.VITE_API_URL || "/api"
+const ACCESS_TOKEN_KEY = "metalgest_access_token"
+const USER_KEY = "metalgest_user"
+
+const browserStorage = {
+  local: () => window.localStorage,
+  session: () => window.sessionStorage,
+}
+
+const getStorageWithKey = (key) => {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  if (browserStorage.session().getItem(key) !== null) {
+    return browserStorage.session()
+  }
+
+  if (browserStorage.local().getItem(key) !== null) {
+    return browserStorage.local()
+  }
+
+  return null
+}
+
+const getPreferredStorage = () => getStorageWithKey(ACCESS_TOKEN_KEY) || getStorageWithKey(USER_KEY) || browserStorage.local()
 
 class HttpError extends Error {
   constructor(message, options = {}) {
@@ -11,17 +36,41 @@ class HttpError extends Error {
 }
 
 const TokenManager = {
-  getAccessToken: () => localStorage.getItem("metalgest_access_token"),
+  getAccessToken: () => {
+    if (typeof window === "undefined") {
+      return null
+    }
 
-  setAccessToken: (accessToken) => {
+    return browserStorage.session().getItem(ACCESS_TOKEN_KEY) || browserStorage.local().getItem(ACCESS_TOKEN_KEY)
+  },
+
+  setAccessToken: (accessToken, rememberMe) => {
     if (accessToken) {
-      localStorage.setItem("metalgest_access_token", accessToken)
+      const targetStorage =
+        rememberMe === true
+          ? browserStorage.local()
+          : rememberMe === false
+            ? browserStorage.session()
+            : getPreferredStorage()
+
+      const fallbackStorage = targetStorage === browserStorage.local()
+        ? browserStorage.session()
+        : browserStorage.local()
+
+      targetStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+      fallbackStorage.removeItem(ACCESS_TOKEN_KEY)
     }
   },
 
   clearTokens: () => {
-    localStorage.removeItem("metalgest_access_token")
-    localStorage.removeItem("metalgest_user")
+    if (typeof window === "undefined") {
+      return
+    }
+
+    browserStorage.local().removeItem(ACCESS_TOKEN_KEY)
+    browserStorage.session().removeItem(ACCESS_TOKEN_KEY)
+    browserStorage.local().removeItem(USER_KEY)
+    browserStorage.session().removeItem(USER_KEY)
   },
 
   isTokenExpired: (token) => {

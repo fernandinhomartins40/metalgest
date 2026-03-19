@@ -1,37 +1,54 @@
 
-import React, { useState } from "react"
+import React, { useId, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 
-function PasswordInput({ register, name, label, placeholder, error, validation }) {
+function PasswordInput({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  required = false,
+  autoComplete = "current-password",
+}) {
+  const generatedId = useId()
+  const inputId = id || generatedId
   const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-slate-700" htmlFor={inputId}>
         {label}
       </label>
       <div className="relative">
         <input
-          {...register(name, validation)}
+          id={inputId}
+          name={name}
           type={showPassword ? "text" : "password"}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200"
+          value={value}
+          onChange={onChange}
           placeholder={placeholder}
+          required={required}
+          autoComplete={autoComplete}
+          className={`w-full rounded-md border px-3 py-2 pr-11 transition focus:outline-none focus:ring-2 ${
+            error
+              ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100"
+              : "border-slate-300 focus:border-slate-400 focus:ring-slate-200"
+          }`}
         />
         <button
           type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          onClick={() => setShowPassword((current) => !current)}
+          className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
+          aria-pressed={showPassword}
         >
-          {showPassword ? (
-            <EyeOff className="h-5 w-5" />
-          ) : (
-            <Eye className="h-5 w-5" />
-          )}
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error.message}</p>
-      )}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
     </div>
   )
 }

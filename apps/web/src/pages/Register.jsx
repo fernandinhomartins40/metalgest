@@ -1,14 +1,38 @@
 import React, { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, UserPlus } from "lucide-react"
+import PasswordInput from "../components/auth/PasswordInput"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useToast } from "../components/ui/use-toast"
+import { useAuth } from "../providers/AuthProvider"
 import auth from "../services/auth"
+
+const strengthScale = [
+  {
+    limit: 0.4,
+    label: "Fraca",
+    barClassName: "bg-red-500",
+    textClassName: "text-red-600",
+  },
+  {
+    limit: 0.8,
+    label: "Media",
+    barClassName: "bg-amber-500",
+    textClassName: "text-amber-600",
+  },
+  {
+    limit: 1,
+    label: "Forte",
+    barClassName: "bg-emerald-500",
+    textClassName: "text-emerald-600",
+  },
+]
 
 function Register() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { register: registerAccount } = useAuth()
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -17,10 +41,10 @@ function Register() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const passwordValidation = useMemo(
-    () => auth.validatePassword(form.password),
-    [form.password]
-  )
+  const passwordValidation = useMemo(() => auth.validatePassword(form.password), [form.password])
+  const passwordStrength =
+    strengthScale.find((item) => passwordValidation.strength <= item.limit) || strengthScale[2]
+  const strengthPercent = Math.max(passwordValidation.strength * 100, form.password ? 12 : 0)
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -33,8 +57,8 @@ function Register() {
     if (!passwordValidation.isValid) {
       toast({
         variant: "destructive",
-        title: "Senha fora do padrão",
-        description: "Use ao menos 8 caracteres com maiúscula, minúscula, número e símbolo.",
+        title: "Senha fora do padrao",
+        description: "Use ao menos 8 caracteres com maiuscula, minuscula, numero e simbolo.",
       })
       return
     }
@@ -42,8 +66,8 @@ function Register() {
     if (form.password !== form.confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Confirmação inválida",
-        description: "As senhas informadas não conferem.",
+        title: "Confirmacao invalida",
+        description: "As senhas informadas nao conferem.",
       })
       return
     }
@@ -51,10 +75,20 @@ function Register() {
     setIsSubmitting(true)
 
     try {
-      await auth.register(form.name, form.email, form.password)
+      const result = await registerAccount(form.name, form.email, form.password, true)
+
+      if (result.verificationRequired) {
+        toast({
+          title: "Confirme seu e-mail",
+          description: result.message || "Enviamos um link para validar o cadastro da sua conta.",
+        })
+        navigate(`/verify-email?email=${encodeURIComponent(form.email)}`, { replace: true })
+        return
+      }
+
       toast({
         title: "Conta criada",
-        description: "O usuário administrador inicial foi registrado com sucesso.",
+        description: "Sua conta foi registrada e a sessao ja foi iniciada.",
       })
       navigate("/app", { replace: true })
     } catch (error) {
@@ -70,20 +104,20 @@ function Register() {
 
   const checks = [
     ["8 caracteres", passwordValidation.requirements.hasMinLength],
-    ["Letra maiúscula", passwordValidation.requirements.hasUpperCase],
-    ["Letra minúscula", passwordValidation.requirements.hasLowerCase],
-    ["Número", passwordValidation.requirements.hasNumber],
-    ["Símbolo", passwordValidation.requirements.hasSymbol],
+    ["Letra maiuscula", passwordValidation.requirements.hasUpperCase],
+    ["Letra minuscula", passwordValidation.requirements.hasLowerCase],
+    ["Numero", passwordValidation.requirements.hasNumber],
+    ["Simbolo", passwordValidation.requirements.hasSymbol],
   ]
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
       <Card className="w-full max-w-lg border-0 shadow-xl">
         <CardHeader className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Bootstrap</p>
-          <CardTitle>Criar conta inicial</CardTitle>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
+          <CardTitle>Criar sua conta</CardTitle>
           <CardDescription>
-            Use esta tela para provisionar o primeiro acesso administrativo da instalação.
+            Cadastre o primeiro acesso da empresa e confirme o e-mail para liberar a operacao.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,6 +132,7 @@ function Register() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
+                  autoComplete="name"
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                   required
                 />
@@ -113,45 +148,58 @@ function Register() {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
+                  autoComplete="email"
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="password">
-                  Senha
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  required
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                label="Senha"
+                value={form.password}
+                onChange={handleChange}
+                required
+                autoComplete="new-password"
+              />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="confirmPassword">
-                  Confirmar senha
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  required
-                />
-              </div>
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                label="Confirmar senha"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                required
+                autoComplete="new-password"
+                error={
+                  form.confirmPassword && form.confirmPassword !== form.password
+                    ? "As senhas informadas nao conferem."
+                    : ""
+                }
+              />
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-700">Requisitos da senha</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-slate-700">Forca da senha</p>
+                <span
+                  className={`text-sm font-semibold ${
+                    form.password ? passwordStrength.textClassName : "text-slate-400"
+                  }`}
+                >
+                  {form.password ? passwordStrength.label : "Aguardando senha"}
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    form.password ? passwordStrength.barClassName : "bg-slate-300"
+                  }`}
+                  style={{ width: `${strengthPercent}%` }}
+                />
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-slate-600">
                 {checks.map(([label, passed]) => (
                   <li key={label} className={passed ? "text-emerald-700" : "text-slate-500"}>
                     {passed ? "OK" : "Pendente"} · {label}
@@ -165,7 +213,12 @@ function Register() {
                 <UserPlus className="h-4 w-4" />
                 {isSubmitting ? "Criando..." : "Criar conta"}
               </Button>
-              <Button type="button" variant="outline" className="gap-2" onClick={() => navigate("/login")}>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => navigate("/login")}
+              >
                 <ArrowLeft className="h-4 w-4" />
                 Voltar ao login
               </Button>

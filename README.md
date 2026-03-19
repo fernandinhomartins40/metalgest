@@ -81,6 +81,7 @@ npm run smoke:docker
 
 - `admin@metalgest.com / admin123`
 - `user@metalgest.com / user123`
+- Credenciais completas em [docs/TEST_CREDENTIALS.md](./docs/TEST_CREDENTIALS.md)
 
 ## Produção
 

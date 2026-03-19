@@ -7,16 +7,21 @@ interface AuthUser {
   name: string
   role: string
   active: boolean
+  emailVerified?: boolean
 }
 
 interface LoginResult {
   success: boolean
   user: AuthUser
+  verificationRequired?: boolean
+  message?: string
+  emailDispatched?: boolean
 }
 
 interface AuthContextType {
   user: AuthUser | null
   login: (email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>
+  register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<LoginResult>
   logout: () => Promise<void>
   isLoading: boolean
   isAuthenticated: boolean
@@ -38,9 +43,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return result
   }
 
+  const register = async (name: string, email: string, password: string, rememberMe = true) => {
+    const result = await auth.register(name, email, password, rememberMe)
+    setUser(result.verificationRequired ? null : result.user)
+    return result
+  }
+
   const logout = async () => {
-    await auth.logout()
-    setUser(null)
+    try {
+      await auth.logout()
+    } finally {
+      setUser(null)
+    }
   }
 
   useEffect(() => {
@@ -62,6 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         login,
+        register,
         logout,
         isLoading,
         isAuthenticated: !!user,

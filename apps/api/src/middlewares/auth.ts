@@ -12,6 +12,7 @@ declare global {
         email: string;
         role: string;
       };
+      rawBody?: string;
     }
   }
 }

@@ -15,6 +15,68 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const testUsers = [
+  {
+    key: 'admin',
+    email: 'admin@metalgest.com',
+    password: 'admin123',
+    name: 'Administrador',
+    role: UserRole.ADMIN,
+    plan: PlanType.ENTERPRISE,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    emailVerified: true,
+    active: true,
+  },
+  {
+    key: 'manager',
+    email: 'user@metalgest.com',
+    password: 'user123',
+    name: 'Gestor Demo',
+    role: UserRole.MANAGER,
+    plan: PlanType.PREMIUM,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    emailVerified: true,
+    active: true,
+    phone: '+55 11 99999-9999',
+  },
+  {
+    key: 'sales',
+    email: 'comercial@metalgest.com',
+    password: 'comercial123',
+    name: 'Comercial Teste',
+    role: UserRole.USER,
+    plan: PlanType.PREMIUM,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    emailVerified: true,
+    active: true,
+    phone: '+55 11 97777-1111',
+  },
+  {
+    key: 'finance',
+    email: 'financeiro@metalgest.com',
+    password: 'financeiro123',
+    name: 'Financeiro Teste',
+    role: UserRole.USER,
+    plan: PlanType.PREMIUM,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    emailVerified: true,
+    active: true,
+    phone: '+55 11 96666-2222',
+  },
+  {
+    key: 'operations',
+    email: 'producao@metalgest.com',
+    password: 'producao123',
+    name: 'Producao Teste',
+    role: UserRole.USER,
+    plan: PlanType.BASIC,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    emailVerified: true,
+    active: true,
+    phone: '+55 11 95555-3333',
+  },
+] as const;
+
 async function main() {
   console.log('Starting database seed...');
 
@@ -27,38 +89,40 @@ async function main() {
   await prisma.service.deleteMany();
   await prisma.product.deleteMany();
   await prisma.client.deleteMany();
+  await prisma.emailWebhookEvent.deleteMany();
+  await prisma.outboundEmail.deleteMany();
+  await prisma.authToken.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
 
-  const adminPassword = await bcrypt.hash('admin123', 12);
-  const managerPassword = await bcrypt.hash('user123', 12);
+  const createdUsers = new Map<string, { id: string }>();
 
-  await prisma.user.create({
-    data: {
-      email: 'admin@metalgest.com',
-      password: adminPassword,
-      name: 'Administrador',
-      role: UserRole.ADMIN,
-      active: true,
-      emailVerified: true,
-      plan: PlanType.ENTERPRISE,
-      subscriptionStatus: SubscriptionStatus.ACTIVE,
-    },
-  });
+  for (const user of testUsers) {
+    const hashedPassword = await bcrypt.hash(user.password, 12);
+    const createdUser = await prisma.user.create({
+      data: {
+        email: user.email,
+        password: hashedPassword,
+        name: user.name,
+        role: user.role,
+        active: user.active,
+        emailVerified: user.emailVerified,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        phone: user.phone,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-  const manager = await prisma.user.create({
-    data: {
-      email: 'user@metalgest.com',
-      password: managerPassword,
-      name: 'Usuario Demo',
-      role: UserRole.MANAGER,
-      active: true,
-      emailVerified: true,
-      plan: PlanType.PREMIUM,
-      subscriptionStatus: SubscriptionStatus.ACTIVE,
-      phone: '+55 11 99999-9999',
-    },
-  });
+    createdUsers.set(user.key, createdUser);
+  }
+
+  const manager = createdUsers.get('manager');
+  if (!manager) {
+    throw new Error('Manager test user was not created.');
+  }
 
   const client1 = await prisma.client.create({
     data: {
@@ -305,8 +369,10 @@ async function main() {
   });
 
   console.log('Seed completed successfully.');
-  console.log('Admin: admin@metalgest.com / admin123');
-  console.log('Manager: user@metalgest.com / user123');
+  console.log('Test users created:');
+  for (const user of testUsers) {
+    console.log(`- ${user.email} / ${user.password}`);
+  }
 }
 
 main()

@@ -1,17 +1,45 @@
 import { httpClient, TokenManager } from "./httpClient"
 
 const STORAGE_KEYS = {
-  USER: "metalgest_user",
   LOGIN_HINT: "metalgest_login_hint",
 }
 
-const saveUser = (user) => {
-  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user))
+const getUserStorage = () => {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  if (sessionStorage.getItem("metalgest_user") !== null) {
+    return sessionStorage
+  }
+
+  if (localStorage.getItem("metalgest_user") !== null) {
+    return localStorage
+  }
+
+  if (sessionStorage.getItem("metalgest_access_token") !== null) {
+    return sessionStorage
+  }
+
+  return localStorage
+}
+
+const saveUser = (user, rememberMe) => {
+  if (typeof window === "undefined" || !user) {
+    return
+  }
+
+  const targetStorage =
+    rememberMe === true ? localStorage : rememberMe === false ? sessionStorage : getUserStorage()
+  const fallbackStorage = targetStorage === localStorage ? sessionStorage : localStorage
+
+  targetStorage.setItem("metalgest_user", JSON.stringify(user))
+  fallbackStorage.removeItem("metalgest_user")
 }
 
 const getStoredUser = () => {
   try {
-    const value = localStorage.getItem(STORAGE_KEYS.USER)
+    const value = sessionStorage.getItem("metalgest_user") || localStorage.getItem("metalgest_user")
     return value ? JSON.parse(value) : null
   } catch {
     return null
@@ -19,7 +47,12 @@ const getStoredUser = () => {
 }
 
 const clearUser = () => {
-  localStorage.removeItem(STORAGE_KEYS.USER)
+  if (typeof window === "undefined") {
+    return
+  }
+
+  sessionStorage.removeItem("metalgest_user")
+  localStorage.removeItem("metalgest_user")
 }
 
 const saveLoginHint = (email) => {
@@ -67,14 +100,14 @@ const validatePassword = (password) => {
 
 export const AuthService = {
   async login(email, password, rememberMe = false) {
-    const response = await httpClient.post("/auth/login", { email, password })
+    const response = await httpClient.post("/auth/login", { email, password, rememberMe })
 
     if (!response.success) {
       throw createError(response, "Login failed")
     }
 
-    TokenManager.setAccessToken(response.data.accessToken)
-    saveUser(response.data.user)
+    TokenManager.setAccessToken(response.data.accessToken, rememberMe)
+    saveUser(response.data.user, rememberMe)
 
     if (rememberMe) {
       saveLoginHint(email)
@@ -85,22 +118,34 @@ export const AuthService = {
     return {
       success: true,
       user: response.data.user,
+      verificationRequired: false,
+      message: response.data.message,
     }
   },
 
-  async register(name, email, password) {
-    const response = await httpClient.post("/auth/register", { name, email, password })
+  async register(name, email, password, rememberMe = true) {
+    const response = await httpClient.post("/auth/register", { name, email, password, rememberMe })
 
     if (!response.success) {
       throw createError(response, "Registration failed")
     }
 
-    TokenManager.setAccessToken(response.data.accessToken)
-    saveUser(response.data.user)
+    const verificationRequired = Boolean(response.data.verificationRequired)
+
+    if (response.data.accessToken) {
+      TokenManager.setAccessToken(response.data.accessToken, rememberMe)
+      saveUser(response.data.user, rememberMe)
+    } else {
+      TokenManager.clearTokens()
+      clearUser()
+    }
 
     return {
       success: true,
       user: response.data.user,
+      verificationRequired,
+      emailDispatched: Boolean(response.data.emailDispatched),
+      message: response.data.message,
     }
   },
 
@@ -164,12 +209,61 @@ export const AuthService = {
     }
   },
 
-  async requestPasswordReset() {
-    throw new Error("Fluxo de recuperação de senha não configurado nesta instalação.")
+  async requestPasswordReset(email) {
+    const response = await httpClient.post("/auth/forgot-password", { email })
+
+    if (!response.success) {
+      throw createError(response, "Password recovery request failed")
+    }
+
+    return {
+      success: true,
+      message: response.data.message || "Password recovery email sent successfully",
+    }
   },
 
-  async resetPassword() {
-    throw new Error("Fluxo de recuperação de senha não configurado nesta instalação.")
+  async resetPassword(token, password) {
+    const response = await httpClient.post("/auth/reset-password", { token, password })
+
+    if (!response.success) {
+      throw createError(response, "Password reset failed")
+    }
+
+    TokenManager.clearTokens()
+    clearUser()
+
+    return {
+      success: true,
+      message: response.data.message || "Password updated successfully",
+    }
+  },
+
+  async verifyEmail(token) {
+    const response = await httpClient.post("/auth/verify-email", { token })
+
+    if (!response.success) {
+      throw createError(response, "Email verification failed")
+    }
+
+    return {
+      success: true,
+      user: response.data.user,
+      message: response.data.message || "Email verified successfully",
+    }
+  },
+
+  async resendVerificationEmail(email) {
+    const response = await httpClient.post("/auth/resend-verification", { email })
+
+    if (!response.success) {
+      throw createError(response, "Verification email request failed")
+    }
+
+    return {
+      success: true,
+      alreadyVerified: Boolean(response.data.alreadyVerified),
+      message: response.data.message || "Verification email sent successfully",
+    }
   },
 
   isAuthenticated() {

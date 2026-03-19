@@ -3,6 +3,7 @@ import authRoutes from './auth.routes';
 import auditRoutes from './audit.routes';
 import clientsRoutes from './clients.routes';
 import dashboardRoutes from './dashboard.routes';
+import emailRoutes from './email.routes';
 import productsRoutes from './products.routes';
 import quotesRoutes from './quotes.routes';
 import serviceOrdersRoutes from './service-orders.routes';
@@ -16,6 +17,7 @@ const router = Router();
 
 // Mount routes
 router.use('/auth', authRoutes);
+router.use('/email', emailRoutes);
 router.use('/audit-logs', auditRoutes);
 router.use('/users', usersRoutes);
 router.use('/clients', clientsRoutes);

@@ -20,6 +20,9 @@ const Users = React.lazy(() => import("./pages/Users"))
 const Settings = React.lazy(() => import("./pages/Settings"))
 const Login = React.lazy(() => import("./pages/Login"))
 const Register = React.lazy(() => import("./pages/Register"))
+const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"))
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"))
+const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"))
 const PublicQuote = React.lazy(() => import("./pages/PublicQuote"))
 
 function App() {
@@ -38,6 +41,21 @@ function App() {
       <Route path="/register" element={
         <Suspense fallback={<Loading fullScreen />}>
           <Register />
+        </Suspense>
+      } />
+      <Route path="/forgot-password" element={
+        <Suspense fallback={<Loading fullScreen />}>
+          <ForgotPassword />
+        </Suspense>
+      } />
+      <Route path="/reset-password" element={
+        <Suspense fallback={<Loading fullScreen />}>
+          <ResetPassword />
+        </Suspense>
+      } />
+      <Route path="/verify-email" element={
+        <Suspense fallback={<Loading fullScreen />}>
+          <VerifyEmail />
         </Suspense>
       } />
       <Route path="/quote/:token" element={
