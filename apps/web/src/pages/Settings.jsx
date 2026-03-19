@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { Save } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
@@ -54,46 +54,46 @@ function Settings() {
   const [systemForm, setSystemForm] = useState(initialSystemForm)
   const [logoFile, setLogoFile] = useState(null)
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        setLoading(true)
+  const loadSettings = useCallback(async () => {
+    try {
+      setLoading(true)
 
-        const [company, system] = await Promise.all([
-          api.settings.getCompany(),
-          api.settings.list(),
-        ])
+      const [company, system] = await Promise.all([
+        api.settings.getCompany(),
+        api.settings.list(),
+      ])
 
-        setCompanyForm((current) => ({
-          ...current,
-          ...company,
-        }))
+      setCompanyForm((current) => ({
+        ...current,
+        ...company,
+      }))
 
-        setSystemForm({
-          lowStockThreshold: system["system.lowStockThreshold"]?.value || "10",
-          quoteTemplate: system["quote.template"]?.value || "",
-          publicLinkEnabled: toBoolean(system["quote.publicLinkEnabled"]?.value, true),
-          pixEnabled: toBoolean(system["payment.pixEnabled"]?.value, false),
-          pixKey: system["payment.pixKey"]?.value || "",
-          timezone: system["system.timezone"]?.value || "America/Sao_Paulo",
-          notificationEmail: toBoolean(system["notification.email"]?.value, true),
-          notificationQuoteApproved: toBoolean(system["notification.quoteApproved"]?.value, true),
-          notificationLowStock: toBoolean(system["notification.lowStock"]?.value, true),
-          notificationLoginFailure: toBoolean(system["notification.loginFailure"]?.value, true),
-        })
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Falha ao carregar configurações",
-          description: error.message,
-        })
-      } finally {
-        setLoading(false)
-      }
+      setSystemForm({
+        lowStockThreshold: system["system.lowStockThreshold"]?.value || "10",
+        quoteTemplate: system["quote.template"]?.value || "",
+        publicLinkEnabled: toBoolean(system["quote.publicLinkEnabled"]?.value, true),
+        pixEnabled: toBoolean(system["payment.pixEnabled"]?.value, false),
+        pixKey: system["payment.pixKey"]?.value || "",
+        timezone: system["system.timezone"]?.value || "America/Sao_Paulo",
+        notificationEmail: toBoolean(system["notification.email"]?.value, true),
+        notificationQuoteApproved: toBoolean(system["notification.quoteApproved"]?.value, true),
+        notificationLowStock: toBoolean(system["notification.lowStock"]?.value, true),
+        notificationLoginFailure: toBoolean(system["notification.loginFailure"]?.value, true),
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao carregar configurações",
+        description: error.message,
+      })
+    } finally {
+      setLoading(false)
     }
-
-    loadSettings()
   }, [toast])
+
+  useEffect(() => {
+    void loadSettings()
+  }, [loadSettings])
 
   const handleCompanyChange = (event) => {
     const { name, value } = event.target

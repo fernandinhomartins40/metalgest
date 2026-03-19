@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, Boxes, FileText, TrendingUp, Users, Wrench } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Loading } from "../components/ui/loading"
@@ -13,32 +13,32 @@ function Dashboard() {
   const [revenueChart, setRevenueChart] = useState([])
   const [topClients, setTopClients] = useState([])
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        setLoading(true)
-        const [statsResult, revenueResult, topClientsResult] = await Promise.all([
-          api.dashboard.getStats(),
-          api.dashboard.getRevenueChart(new Date().getFullYear()),
-          api.dashboard.getTopClients(5),
-        ])
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [statsResult, revenueResult, topClientsResult] = await Promise.all([
+        api.dashboard.getStats(),
+        api.dashboard.getRevenueChart(new Date().getFullYear()),
+        api.dashboard.getTopClients(5),
+      ])
 
-        setStats(statsResult)
-        setRevenueChart(revenueResult.data || [])
-        setTopClients(topClientsResult)
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Falha ao carregar dashboard",
-          description: error.message,
-        })
-      } finally {
-        setLoading(false)
-      }
+      setStats(statsResult)
+      setRevenueChart(revenueResult.data || [])
+      setTopClients(topClientsResult)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao carregar dashboard",
+        description: error.message,
+      })
+    } finally {
+      setLoading(false)
     }
-
-    loadDashboard()
   }, [toast])
+
+  useEffect(() => {
+    void loadDashboard()
+  }, [loadDashboard])
 
   const cards = useMemo(() => {
     if (!stats) return []

@@ -1,8 +1,7 @@
-
 import React from "react"
-import { useToast, ToastContext } from "./use-toast"
+import { ToastContext, useToastState } from "./use-toast"
 
 export function ToastProvider({ children }) {
-  const value = useToast()
+  const value = useToastState()
   return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>
 }

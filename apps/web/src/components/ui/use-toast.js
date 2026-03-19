@@ -1,17 +1,16 @@
-
-import { useState, useEffect, createContext, useContext } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-}
 
 let count = 0
+let externalToast = null
 
 function generateId() {
   count = (count + 1) % Number.MAX_VALUE
@@ -20,15 +19,13 @@ function generateId() {
 
 const ToastContext = createContext(undefined)
 
-function useToast() {
-  const [state, setState] = useState({
-    toasts: [],
-  })
+function useToastState() {
+  const [toasts, setToasts] = useState([])
 
   useEffect(() => {
     const timeouts = []
 
-    state.toasts.forEach((toast) => {
+    toasts.forEach((toast) => {
       if (toast.duration === Infinity) {
         return
       }
@@ -43,60 +40,76 @@ function useToast() {
     return () => {
       timeouts.forEach((timeout) => clearTimeout(timeout))
     }
-  }, [state.toasts])
+  }, [toasts])
 
-  const toast = ({ ...props }) => {
+  const dismissToast = useCallback((id) => {
+    setToasts((currentToasts) => currentToasts.filter((toast) => toast.id !== id))
+  }, [])
+
+  const toast = useCallback(({ ...props }) => {
     const id = generateId()
+    const dismiss = () => dismissToast(id)
 
-    const update = (props) =>
-      setState((state) => ({
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === id ? { ...t, ...props } : t
-        ),
-      }))
+    const update = (nextProps) => {
+      setToasts((currentToasts) =>
+        currentToasts.map((currentToast) =>
+          currentToast.id === id
+            ? { ...currentToast, ...nextProps, dismiss }
+            : currentToast
+        )
+      )
+    }
 
-    const dismiss = () => setState((state) => ({
-      ...state,
-      toasts: state.toasts.filter((t) => t.id !== id),
-    }))
-
-    setState((state) => ({
-      ...state,
-      toasts: [
+    setToasts((currentToasts) =>
+      [
         { ...props, id, dismiss },
-        ...state.toasts,
-      ].slice(0, TOAST_LIMIT),
-    }))
+        ...currentToasts.filter((currentToast) => currentToast.id !== id),
+      ].slice(0, TOAST_LIMIT)
+    )
 
     return {
       id,
       dismiss,
       update,
     }
-  }
+  }, [dismissToast])
 
-  return {
+  useEffect(() => {
+    externalToast = toast
+
+    return () => {
+      if (externalToast === toast) {
+        externalToast = null
+      }
+    }
+  }, [toast])
+
+  return useMemo(() => ({
     toast,
-    toasts: state.toasts,
-  }
+    toasts,
+  }), [toast, toasts])
 }
 
-function useToastContext() {
+function useToast() {
   const context = useContext(ToastContext)
+
   if (!context) {
     throw new Error("useToast must be used within a ToastProvider")
   }
+
   return context
 }
 
-// Create a standalone toast function that uses the context
-const toast = (props) => {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider")
-  }
-  return context.toast(props)
+function useToastContext() {
+  return useToast()
 }
 
-export { useToast, useToastContext, ToastContext, toast }
+const toast = (props) => {
+  if (!externalToast) {
+    throw new Error("useToast must be used within a ToastProvider")
+  }
+
+  return externalToast(props)
+}
+
+export { useToast, useToastContext, useToastState, ToastContext, toast }
