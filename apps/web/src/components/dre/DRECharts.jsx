@@ -1,23 +1,32 @@
-
 import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import {
-  LineChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
 } from "recharts"
 
 function DRECharts({ historicalData, comparativeData, calculateVariation }) {
+  const current = comparativeData?.current ?? comparativeData?.atual
+  const previous = comparativeData?.previous ?? comparativeData?.anterior
+  const comparisonItems = current && previous
+    ? [
+        { label: "Receita Bruta", atual: current.receitaBruta, anterior: previous.receitaBruta },
+        { label: "Lucro Bruto", atual: current.lucroBruto, anterior: previous.lucroBruto },
+        { label: "Lucro Liquido", atual: current.lucroLiquido, anterior: previous.lucroLiquido },
+      ]
+    : []
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Evolução do Resultado</CardTitle>
+          <CardTitle>Evolucao do Resultado</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
@@ -28,25 +37,25 @@ function DRECharts({ historicalData, comparativeData, calculateVariation }) {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="resultado" 
+                <Line
+                  type="monotone"
+                  dataKey="resultado"
                   name="Resultado"
-                  stroke="#4F46E5" 
+                  stroke="#4F46E5"
                   strokeWidth={2}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="receitas" 
+                <Line
+                  type="monotone"
+                  dataKey="receitas"
                   name="Receitas"
-                  stroke="#22C55E" 
+                  stroke="#22C55E"
                   strokeWidth={2}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="despesas" 
+                <Line
+                  type="monotone"
+                  dataKey="despesas"
                   name="Despesas"
-                  stroke="#EF4444" 
+                  stroke="#EF4444"
                   strokeWidth={2}
                 />
               </LineChart>
@@ -57,40 +66,32 @@ function DRECharts({ historicalData, comparativeData, calculateVariation }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Comparativo com Período Anterior</CardTitle>
+          <CardTitle>Comparativo com Periodo Anterior</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {comparativeData && [
-              { label: "Receita Bruta", atual: comparativeData.current.receitaBruta, anterior: comparativeData.previous.receitaBruta },
-              { label: "Lucro Bruto", atual: comparativeData.current.lucroBruto, anterior: comparativeData.previous.lucroBruto },
-              { label: "Lucro Líquido", atual: comparativeData.current.lucroLiquido, anterior: comparativeData.previous.lucroLiquido }
-            ].map((item, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{item.label}</span>
-                  <span className={
-                    calculateVariation(item.atual, item.anterior) >= 0 
-                      ? "text-green-600" 
-                      : "text-red-600"
-                  }>
-                    {calculateVariation(item.atual, item.anterior)}%
-                  </span>
+            {comparisonItems.map((item) => {
+              const variation = Number(calculateVariation(item.atual, item.anterior))
+
+              return (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{item.label}</span>
+                    <span className={variation >= 0 ? "text-green-600" : "text-red-600"}>
+                      {variation.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-200">
+                    <div
+                      className={`h-2 rounded-full ${variation >= 0 ? "bg-green-500" : "bg-red-500"}`}
+                      style={{
+                        width: `${Math.min(Math.abs(variation), 100)}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full">
-                  <div
-                    className={`h-2 rounded-full ${
-                      calculateVariation(item.atual, item.anterior) >= 0 
-                        ? "bg-green-500" 
-                        : "bg-red-500"
-                    }`}
-                    style={{
-                      width: `${Math.min(Math.abs(calculateVariation(item.atual, item.anterior)), 100)}%`
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </CardContent>
       </Card>
