@@ -216,9 +216,16 @@ export const AuthService = {
       throw createError(response, "Password recovery request failed")
     }
 
+    const recoveryAvailable = response.data.recoveryAvailable !== false
+    const message = recoveryAvailable
+      ? "Se o e-mail existir, um link de recuperacao foi enviado."
+      : "A recuperacao por e-mail esta temporariamente indisponivel. Entre em contato com o suporte."
+
     return {
       success: true,
-      message: response.data.message || "Password recovery email sent successfully",
+      recoveryAvailable,
+      emailDispatched: Boolean(response.data.emailDispatched),
+      message,
     }
   },
 

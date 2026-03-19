@@ -44,6 +44,12 @@ type LoginResult = {
   rememberMe: boolean;
 };
 
+type ForgotPasswordResult = {
+  recoveryAvailable: boolean;
+  emailDispatched: boolean;
+  message: string;
+};
+
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 const assertPasswordPolicy = (password: string) => {
@@ -435,22 +441,33 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string): Promise<ForgotPasswordResult> {
     const normalizedEmail = normalizeEmail(email);
+    const recoveryAvailable = emailService.isConfigured();
 
-    this.ensureEmailServiceConfigured('password_reset');
+    if (!recoveryAvailable) {
+      return {
+        recoveryAvailable: false,
+        emailDispatched: false,
+        message: 'Password recovery is temporarily unavailable. Please contact support.',
+      };
+    }
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (!user || !user.active) {
       return {
+        recoveryAvailable: true,
+        emailDispatched: false,
         message: 'If the email exists, a password reset link has been sent.',
       };
     }
 
-    await this.sendPasswordResetEmail(user.id, user.email, user.name);
+    const emailDispatched = await this.sendPasswordResetEmail(user.id, user.email, user.name);
 
     return {
+      recoveryAvailable: true,
+      emailDispatched,
       message: 'If the email exists, a password reset link has been sent.',
     };
   }

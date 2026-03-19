@@ -11,17 +11,22 @@ function ForgotPassword() {
   const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [successMessage, setSuccessMessage] = useState("")
+  const [feedback, setFeedback] = useState(null)
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    setFeedback(null)
     setIsSubmitting(true)
 
     try {
       const result = await auth.requestPasswordReset(email)
-      setSuccessMessage(result.message)
+      setFeedback({
+        tone: result.recoveryAvailable ? "success" : "warning",
+        message: result.message,
+      })
       toast({
-        title: "Confira seu e-mail",
+        variant: result.recoveryAvailable ? "default" : "destructive",
+        title: result.recoveryAvailable ? "Confira seu e-mail" : "Recuperacao indisponivel",
         description: result.message,
       })
     } catch (error) {
@@ -63,9 +68,15 @@ function ForgotPassword() {
               />
             </div>
 
-            {successMessage ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                {successMessage}
+            {feedback ? (
+              <div
+                className={`rounded-lg border px-4 py-3 text-sm ${
+                  feedback.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-amber-200 bg-amber-50 text-amber-900"
+                }`}
+              >
+                {feedback.message}
               </div>
             ) : null}
 
