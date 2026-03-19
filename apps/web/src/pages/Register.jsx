@@ -45,6 +45,13 @@ function Register() {
   const passwordStrength =
     strengthScale.find((item) => passwordValidation.strength <= item.limit) || strengthScale[2]
   const strengthPercent = Math.max(passwordValidation.strength * 100, form.password ? 12 : 0)
+  const passwordsMatch = form.password.length > 0 && form.password === form.confirmPassword
+  const canSubmit =
+    form.name.trim().length >= 2 &&
+    form.email.trim().length > 0 &&
+    passwordValidation.isValid &&
+    passwordsMatch &&
+    !isSubmitting
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -202,14 +209,16 @@ function Register() {
               <ul className="mt-4 space-y-2 text-sm text-slate-600">
                 {checks.map(([label, passed]) => (
                   <li key={label} className={passed ? "text-emerald-700" : "text-slate-500"}>
-                    {passed ? "OK" : "Pendente"} · {label}
+                    {passed ? "OK" : "Pendente"}
+                    {" \u00b7 "}
+                    {label}
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+              <Button type="submit" className="flex-1 gap-2" disabled={!canSubmit}>
                 <UserPlus className="h-4 w-4" />
                 {isSubmitting ? "Criando..." : "Criar conta"}
               </Button>

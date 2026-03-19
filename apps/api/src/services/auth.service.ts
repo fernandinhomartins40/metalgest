@@ -243,13 +243,10 @@ export class AuthService {
   async register(name: string, email: string, password: string, rememberMe = true): Promise<RegisterResult> {
     const normalizedEmail = normalizeEmail(email);
     const trimmedName = name.trim();
-    const verificationRequired = this.isEmailVerificationRequired();
+    const verificationRequested = this.isEmailVerificationRequired();
+    const verificationRequired = verificationRequested && emailService.isConfigured();
 
     assertPasswordPolicy(password);
-
-    if (verificationRequired) {
-      this.ensureEmailServiceConfigured('verification');
-    }
 
     const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
