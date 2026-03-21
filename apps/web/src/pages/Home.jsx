@@ -7,46 +7,80 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 
 const heroStats = [
   {
-    value: "4 frentes",
-    label: "Comercial, produção, estoque e financeiro conectados",
+    value: "Tudo junto",
+    label: "Comercial, produção, estoque e financeiro",
   },
   {
-    value: "100% web",
-    label: "Acesse a operação sem depender da máquina do escritório",
+    value: "Acesso web",
+    label: "Sistema disponível em qualquer lugar",
   },
   {
-    value: "1 fluxo",
-    label: "Do orçamento ao recebimento em um único sistema",
+    value: "Fluxo único",
+    label: "Do pedido ao recebimento",
   },
   {
     value: "Tempo real",
-    label: "Visibilidade das prioridades e gargalos do dia",
+    label: "Prioridades e gargalos no radar",
   },
 ]
 
 const quickSignals = [
-  "Orçamentos acompanhados",
-  "Pedidos em execução",
-  "Estoque visível",
-  "Recebimentos no radar",
+  "Orçamentos",
+  "Produção",
+  "Estoque",
+  "Financeiro",
 ]
 
-const heroFocusCards = [
+const heroFloatingCards = [
   {
     title: "Comercial",
-    description: "Propostas, retornos e pedidos no radar.",
-  },
-  {
-    title: "Produção",
-    description: "Prioridades do dia com menos improviso.",
+    value: "Orçamentos no radar",
+    icon: FileText,
+    positionClassName: "left-4 top-8 w-[220px] sm:left-10 sm:top-10 sm:w-[250px]",
+    accentClassName: "border-[#19d88f]/30 bg-[#11372f]/88 text-[#8df3c8]",
+    animationName: "heroFloatUp",
+    animationDuration: "7.2s",
+    animationDelay: "0s",
   },
   {
     title: "Estoque",
-    description: "Materiais e reposição antes da urgência.",
+    value: "Materiais disponíveis",
+    icon: Package,
+    positionClassName: "right-4 top-24 w-[220px] sm:right-8 sm:top-16 sm:w-[250px]",
+    accentClassName: "border-[#7c5cff]/30 bg-[#2f2960]/88 text-[#c4b7ff]",
+    animationName: "heroFloatDown",
+    animationDuration: "8s",
+    animationDelay: "0.6s",
+  },
+  {
+    title: "Produção",
+    value: "Pedido 184 em execução",
+    icon: Wrench,
+    positionClassName: "left-8 top-52 w-[240px] sm:left-16 sm:top-56 sm:w-[270px]",
+    accentClassName: "border-[#4f7cff]/25 bg-[#23426a]/88 text-[#a5c6ff]",
+    animationName: "heroFloatUp",
+    animationDuration: "7.8s",
+    animationDelay: "1.2s",
   },
   {
     title: "Financeiro",
-    description: "Recebimentos e despesas com mais clareza.",
+    value: "Recebimentos do dia",
+    icon: Wallet,
+    positionClassName: "right-5 top-[19rem] w-[220px] sm:right-12 sm:top-[19.5rem] sm:w-[250px]",
+    accentClassName: "border-[#f3b53f]/25 bg-[#3a3018]/88 text-[#ffd98a]",
+    animationName: "heroFloatDown",
+    animationDuration: "8.4s",
+    animationDelay: "0.9s",
+  },
+  {
+    title: "Relatórios",
+    value: "Indicadores ao vivo",
+    icon: BarChart3,
+    positionClassName: "left-1/2 bottom-10 w-[220px] -translate-x-1/2 sm:bottom-8 sm:w-[250px]",
+    accentClassName: "border-white/15 bg-white/10 text-slate-200",
+    animationName: "heroFloatUp",
+    animationDuration: "7.6s",
+    animationDelay: "1.5s",
   },
 ]
 
@@ -204,6 +238,39 @@ const mobileHighlights = [
   "Use a mesma base da equipe inteira",
 ]
 
+const mobilityFloatingCards = [
+  {
+    title: "Comercial",
+    value: "3 retornos pendentes",
+    icon: FileText,
+    positionClassName: "left-0 top-14 w-[240px]",
+    accentClassName: "border-[#7c5cff]/28 bg-[#1c2f4c]/92 text-[#c4b7ff]",
+    animationName: "heroFloatUp",
+    animationDuration: "7.4s",
+    animationDelay: "0.2s",
+  },
+  {
+    title: "Produção",
+    value: "Pedido 184 em execução",
+    icon: Wrench,
+    positionClassName: "right-2 top-28 w-[260px]",
+    accentClassName: "border-[#19d88f]/28 bg-[#163a34]/92 text-[#8df3c8]",
+    animationName: "heroFloatDown",
+    animationDuration: "8s",
+    animationDelay: "0.7s",
+  },
+  {
+    title: "Financeiro",
+    value: "Recebimentos do dia",
+    icon: Wallet,
+    positionClassName: "left-8 bottom-12 w-[250px]",
+    accentClassName: "border-[#f3b53f]/24 bg-[#3a3018]/92 text-[#ffd98a]",
+    animationName: "heroFloatUp",
+    animationDuration: "7.8s",
+    animationDelay: "1.1s",
+  },
+]
+
 const footerLinks = [
   { label: "Soluções", href: "#solucoes" },
   { label: "Funcionalidades", href: "#funcionalidades" },
@@ -216,6 +283,17 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
+      <style>{`
+        @keyframes heroFloatUp {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(0, -14px, 0); }
+        }
+
+        @keyframes heroFloatDown {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(0, 12px, 0); }
+        }
+      `}</style>
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
@@ -255,18 +333,18 @@ function Home() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[13px] font-semibold tracking-[0.08em] text-slate-200">
               <span className="h-2.5 w-2.5 rounded-full bg-[#19d88f]" />
-              Sistema completo para a rotina da metalúrgica
+              ERP para metalúrgicas
             </div>
             <h1 className="mt-8 max-w-4xl text-[2.8rem] font-black leading-[0.98] tracking-tight text-white sm:text-[3.5rem] lg:text-[4.35rem]">
               Sistema completo
               <br />
               para sua metalúrgica
               <br />
-              <span className="text-[#19d88f]">evoluir com</span>{" "}
+              <span className="text-[#19d88f]">com mais</span>{" "}
               <span className="text-[#f3b53f]">controle.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
-              O MetalGest centraliza orçamento, produção, materiais e financeiro para a rotina rodar com mais controle.
+              Do orçamento ao recebimento no mesmo sistema.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -318,51 +396,54 @@ function Home() {
           <div className="relative">
             <div className="absolute left-8 top-8 h-32 w-32 rounded-full bg-[#19d88f]/20 blur-3xl" />
             <div className="absolute bottom-10 right-10 h-40 w-40 rounded-full bg-[#7c5cff]/20 blur-3xl" />
-            <Card className="relative overflow-hidden rounded-[2rem] border-white/10 bg-[linear-gradient(180deg,rgba(13,31,46,0.95)_0%,rgba(7,20,31,0.92)_100%)] text-white shadow-[0_30px_80px_rgba(2,10,18,0.55)]">
-              <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
-              <CardHeader className="relative space-y-4 pb-2">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#7c5cff]">Visão da operação</p>
-                <CardTitle className="max-w-lg text-[2.2rem] leading-[1.05] tracking-tight text-white sm:text-[2.6rem]">
-                  Tudo no radar sem planilha paralela
-                </CardTitle>
-                <CardDescription className="max-w-md text-base leading-7 text-slate-300 sm:text-lg">
-                  Pedido, produção, materiais e caixa no mesmo fluxo.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="relative pb-8 pt-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {heroFocusCards.map((item, index) => (
-                    <div
-                      key={item.title}
-                      className={`rounded-[1.6rem] border p-5 backdrop-blur ${
-                        index === 0
-                          ? "border-[#19d88f]/30 bg-[#0f2f28]/80"
-                          : index === 1
-                            ? "border-[#7c5cff]/30 bg-[#231b45]/80"
-                            : index === 2
-                              ? "border-white/10 bg-white/6"
-                              : "border-[#f3b53f]/20 bg-[#2a2413]/70"
-                      }`}
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200">{item.title}</p>
-                      <p className="mt-3 text-base font-semibold leading-7 text-white">{item.description}</p>
-                    </div>
-                  ))}
-                </div>
 
-                <div className="mt-4 rounded-[1.6rem] border border-white/10 bg-white/95 px-5 py-4 text-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.14)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#19d88f]">Fluxo único</p>
-                  <p className="mt-2 text-base leading-7 text-slate-600">Do orçamento ao recebimento com menos retrabalho entre setores.</p>
-                </div>
-              </CardContent>
-            </Card>
-            <div className="absolute -left-3 top-16 hidden rounded-2xl border border-[#19d88f]/30 bg-[#0f2f28] px-4 py-3 shadow-lg md:block">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8df3c8]">Caixa hoje</p>
-              <p className="mt-1 text-sm font-bold text-white">Recebimentos sob controle</p>
-            </div>
-            <div className="absolute -right-2 top-28 hidden rounded-2xl border border-[#7c5cff]/30 bg-[#231b45] px-4 py-3 shadow-lg md:block">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7a5ff]">Pedidos</p>
-              <p className="mt-1 text-sm font-bold text-white">Fila com prioridade definida</p>
+            <div className="relative h-full min-h-[520px] rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(13,31,46,0.72)_0%,rgba(7,20,31,0.9)_100%)] shadow-[0_30px_80px_rgba(2,10,18,0.55)]">
+              <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
+              <div className="absolute left-[14%] top-[18%] h-[250px] w-[72%] rotate-[-8deg] rounded-[2.4rem] border border-white/10 bg-[linear-gradient(180deg,rgba(123,113,255,0.22)_0%,rgba(39,59,146,0.14)_50%,rgba(11,24,42,0.42)_100%)] shadow-[0_30px_80px_rgba(7,12,22,0.45)]" />
+              <div className="absolute left-[18%] top-[24%] h-[190px] w-[64%] rotate-[-8deg] rounded-[2rem] bg-[linear-gradient(180deg,rgba(91,123,255,0.78)_0%,rgba(42,63,153,0.68)_100%)] opacity-85 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
+
+              <div className="relative hidden h-full lg:block">
+                {heroFloatingCards.map((item) => (
+                  <div
+                    key={item.title}
+                    className={`absolute rounded-[1.7rem] border px-5 py-4 shadow-[0_20px_40px_rgba(7,12,22,0.3)] backdrop-blur-md ${item.positionClassName} ${item.accentClassName}`}
+                    style={{
+                      animationName: item.animationName,
+                      animationDuration: item.animationDuration,
+                      animationTimingFunction: "ease-in-out",
+                      animationIterationCount: "infinite",
+                      animationDelay: item.animationDelay,
+                      willChange: "transform",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="mt-2 text-xl font-bold leading-tight text-white">{item.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="relative grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
+                {heroFloatingCards.map((item) => (
+                  <div key={item.title} className={`rounded-[1.5rem] border px-4 py-4 backdrop-blur-md ${item.accentClassName}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -371,7 +452,7 @@ function Home() {
       <section id="solucoes" className="relative overflow-hidden bg-white px-4 py-20 sm:px-6 lg:px-8">
         <div className="absolute inset-0 opacity-50 [background-image:radial-gradient(rgba(124,92,255,0.12)_1px,transparent_1px)] [background-size:18px_18px]" />
         <div className="relative mx-auto max-w-7xl">
-        <div className="max-w-3xl space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4 text-center">
           <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#7c5cff]">Soluções por rotina</p>
           <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.15rem]">
             Sua metalúrgica não trabalha de forma genérica. <span className="text-[#7c5cff]">O sistema também não deveria.</span>
@@ -399,7 +480,7 @@ function Home() {
 
       <section id="funcionalidades" className="bg-[#f5f7fb] px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-[#143047] bg-[linear-gradient(180deg,#081827_0%,#0b2235_100%)] p-6 shadow-[0_30px_80px_rgba(6,18,29,0.28)] sm:p-8 lg:p-10">
-          <div className="max-w-3xl space-y-4">
+          <div className="mx-auto max-w-4xl space-y-4 text-center">
             <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#19d88f]">Funcionalidades</p>
             <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-[3.05rem]">
               Tudo que a operação precisa em um só lugar
@@ -410,7 +491,7 @@ function Home() {
           </div>
 
           <Tabs defaultValue="comercial" className="mt-12">
-            <TabsList className="h-auto flex-wrap justify-start gap-2 rounded-full bg-white/6 p-2">
+            <TabsList className="h-auto flex-wrap justify-center gap-2 rounded-full bg-white/6 p-2">
               {Object.entries(moduleTabs).map(([key, item], index) => (
                 <TabsTrigger
                   key={key}
@@ -456,7 +537,7 @@ function Home() {
 
       <section id="operacao" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl space-y-4">
+          <div className="mx-auto max-w-4xl space-y-4 text-center">
             <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#7c5cff]">Fluxo da rotina</p>
             <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.05rem]">
               Do orçamento ao recebimento em uma sequência clara.
@@ -486,7 +567,7 @@ function Home() {
         <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-[#143047] bg-[linear-gradient(135deg,#071826_0%,#0b2235_60%,#0d1622_100%)] shadow-[0_30px_80px_rgba(6,18,29,0.28)]">
           <div className="grid gap-8 lg:grid-cols-[0.86fr_1.14fr]">
             <div className="p-8 sm:p-10">
-              <div className="max-w-xl space-y-4">
+              <div className="mx-auto max-w-2xl space-y-4 text-center">
                 <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#19d88f]">Mobilidade</p>
                 <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-[3.05rem]">
                   Sua empresa na palma da mão.
@@ -496,7 +577,7 @@ function Home() {
                 </p>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mx-auto mt-6 max-w-xl space-y-3">
                 {mobileHighlights.map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#19d88f]" />
@@ -505,7 +586,7 @@ function Home() {
                 ))}
               </div>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <Button className="h-11 rounded-full bg-[#19d88f] px-6 text-[#072235] hover:bg-[#16c17f]" onClick={() => navigate("/register")}>
                   Criar conta
                 </Button>
@@ -515,48 +596,99 @@ function Home() {
               </div>
             </div>
 
-            <div className="relative min-h-[420px] bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
+            <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
               <div className="absolute left-6 top-8 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-slate-200 backdrop-blur sm:left-8">
-                Prioridades do dia
+                Painel da operação
               </div>
 
-              <div className="absolute left-6 top-28 hidden w-56 rounded-[1.6rem] border border-white/10 bg-[#10243a] p-4 shadow-lg sm:block lg:left-10">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7a5ff]">Comercial</p>
-                <p className="mt-2 text-sm font-bold text-white">3 propostas aguardando retorno</p>
-              </div>
-
-              <div className="relative flex h-full min-h-[340px] items-end justify-center pt-20 sm:items-center sm:pt-10 lg:justify-end lg:pt-0">
-                <div className="relative h-[330px] w-[186px] rounded-[2rem] border border-white/10 bg-[#08111c] p-3 shadow-[0_28px_60px_rgba(0,0,0,0.45)] sm:h-[360px] sm:w-[205px]">
-                  <div className="mx-auto mt-1 h-1.5 w-16 rounded-full bg-white/12" />
-                  <div className="mt-5 rounded-[1.5rem] bg-[linear-gradient(180deg,#0f2337_0%,#09131f_100%)] p-3">
-                    <div className="rounded-2xl bg-[#19d88f]/16 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8df3c8]">Produção</p>
-                      <p className="mt-2 text-sm font-bold leading-6 text-white">Pedido 184 em execução</p>
+              <div className="relative hidden h-full min-h-[340px] lg:block">
+                <div className="absolute left-1/2 top-1/2 w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,28,43,0.96)_0%,rgba(10,20,31,0.96)_100%)] p-5 shadow-[0_32px_80px_rgba(0,0,0,0.35)]">
+                  <div className="flex items-center justify-between rounded-[1.3rem] border border-white/8 bg-white/6 px-4 py-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Visão geral</p>
+                      <p className="mt-1 text-lg font-bold text-white">Operação em andamento</p>
                     </div>
-                    <div className="mt-3 space-y-3">
+                    <span className="rounded-full bg-[#19d88f]/18 px-3 py-1 text-xs font-semibold text-[#8df3c8]">Ao vivo</span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ["Pedidos", "18 ativos"],
+                      ["Estoque", "2 itens críticos"],
+                      ["Financeiro", "7 recebimentos"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-[1.2rem] border border-white/8 bg-white/6 px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{label}</p>
+                        <p className="mt-2 text-lg font-bold text-white">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 rounded-[1.3rem] border border-white/8 bg-white/6 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">Fluxo do dia</p>
+                      <p className="text-xs font-medium text-slate-400">Atualizado agora</p>
+                    </div>
+                    <div className="mt-4 space-y-3">
                       {[
-                        ["Estoque", "bg-[#f3b53f]"],
-                        ["Comercial", "bg-[#7c5cff]"],
-                        ["Financeiro", "bg-[#19d88f]"],
-                      ].map(([label, color]) => (
-                        <div key={label} className="rounded-xl border border-white/8 bg-white/6 p-3">
+                        ["Comercial", "78%", "bg-[#7c5cff]"],
+                        ["Produção", "64%", "bg-[#19d88f]"],
+                        ["Financeiro", "52%", "bg-[#f3b53f]"],
+                      ].map(([label, value, color]) => (
+                        <div key={label}>
                           <div className="flex items-center justify-between text-xs text-slate-300">
                             <span>{label}</span>
-                            <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+                            <span>{value}</span>
                           </div>
                           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                            <div className={`h-full rounded-full ${color}`} style={{ width: "72%" }} />
+                            <div className={`h-full rounded-full ${color}`} style={{ width: value }} />
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
+
+                {mobilityFloatingCards.map((item) => (
+                  <div
+                    key={item.title}
+                    className={`absolute rounded-[1.6rem] border px-5 py-4 shadow-[0_20px_40px_rgba(7,12,22,0.24)] backdrop-blur-md ${item.positionClassName} ${item.accentClassName}`}
+                    style={{
+                      animationName: item.animationName,
+                      animationDuration: item.animationDuration,
+                      animationTimingFunction: "ease-in-out",
+                      animationIterationCount: "infinite",
+                      animationDelay: item.animationDelay,
+                      willChange: "transform",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="mt-2 text-lg font-bold leading-6 text-white">{item.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="absolute bottom-10 left-6 hidden w-64 rounded-[1.6rem] border border-[#19d88f]/20 bg-[#0f2f28]/80 p-4 shadow-lg lg:block">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8df3c8]">Financeiro</p>
-                <p className="mt-2 text-sm font-bold text-white">Recebimentos do dia sempre acessíveis</p>
+              <div className="grid gap-4 pt-16 sm:grid-cols-2 lg:hidden">
+                {mobilityFloatingCards.map((item) => (
+                  <div key={item.title} className={`rounded-[1.5rem] border px-4 py-4 backdrop-blur-md ${item.accentClassName}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -565,7 +697,7 @@ function Home() {
 
       <section id="diferenciais" className="border-y border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="max-w-3xl space-y-4">
+          <div className="mx-auto max-w-4xl space-y-4 text-center">
             <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#7c5cff]">Por que escolher</p>
             <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.05rem]">
               Detalhes que fazem a <span className="text-[#7c5cff]">diferença</span> na rotina da metalúrgica
@@ -600,10 +732,10 @@ function Home() {
       </section>
 
       <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-[#153049] bg-[linear-gradient(135deg,#06121d_0%,#0a2133_60%,#07111a_100%)] px-6 py-12 shadow-[0_30px_80px_rgba(6,18,29,0.3)] sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
-          <div className="max-w-3xl space-y-4">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-[#153049] bg-[linear-gradient(135deg,#06121d_0%,#0a2133_60%,#07111a_100%)] px-6 py-12 text-center shadow-[0_30px_80px_rgba(6,18,29,0.3)] sm:px-10">
+          <div className="mx-auto max-w-4xl space-y-4">
             <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#f3b53f]">Comece hoje</p>
-            <h2 className="max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-[3.05rem]">
+            <h2 className="mx-auto max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-[3.05rem]">
               Se a desorganização já está pesando em prazo, entrega e caixa, este é o momento de estruturar a operação.
             </h2>
             <p className="text-lg leading-8 text-slate-300 sm:text-xl">
@@ -611,7 +743,7 @@ function Home() {
             </p>
           </div>
 
-          <div className="mt-8 flex flex-col gap-4 lg:mt-0 lg:min-w-[250px]">
+          <div className="mt-8 flex flex-col gap-4 sm:items-center">
             <Button
               className="h-12 rounded-full bg-[#19d88f] text-base text-[#072235] hover:bg-[#16c17f]"
               onClick={() => navigate("/register")}
