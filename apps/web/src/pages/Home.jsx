@@ -10,7 +10,9 @@ const heroFloatingCards = [
     title: "Comercial",
     value: "Orçamentos no radar",
     icon: FileText,
-    positionClassName: "left-4 top-8 w-[220px] sm:left-10 sm:top-10 sm:w-[250px]",
+    positionClassName: "left-0 top-2 w-[248px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(70,90,218,0.72)_0%,rgba(49,63,162,0.84)_100%)]",
     iconAccentClassName: "bg-[#22d3a6]/14 text-[#22d3a6]",
     animationName: "heroFloatUp",
     animationDuration: "7.2s",
@@ -20,7 +22,9 @@ const heroFloatingCards = [
     title: "Estoque",
     value: "Materiais disponíveis",
     icon: Package,
-    positionClassName: "right-4 top-24 w-[220px] sm:right-8 sm:top-16 sm:w-[250px]",
+    positionClassName: "right-4 top-20 w-[248px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(164,146,255,0.58)_0%,rgba(89,81,232,0.86)_100%)]",
     iconAccentClassName: "bg-[#8b7dff]/14 text-[#8b7dff]",
     animationName: "heroFloatDown",
     animationDuration: "8s",
@@ -30,7 +34,9 @@ const heroFloatingCards = [
     title: "Produção",
     value: "Pedido 184 em execução",
     icon: Wrench,
-    positionClassName: "left-8 top-52 w-[240px] sm:left-16 sm:top-56 sm:w-[270px]",
+    positionClassName: "left-8 top-52 w-[272px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(171,198,255,0.82)_0%,rgba(107,146,248,0.92)_100%)]",
     iconAccentClassName: "bg-[#90b3ff]/14 text-[#90b3ff]",
     animationName: "heroFloatUp",
     animationDuration: "7.8s",
@@ -40,7 +46,9 @@ const heroFloatingCards = [
     title: "Financeiro",
     value: "Recebimentos do dia",
     icon: Wallet,
-    positionClassName: "right-5 top-[19rem] w-[220px] sm:right-12 sm:top-[19.5rem] sm:w-[250px]",
+    positionClassName: "right-10 top-[18.75rem] w-[248px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(121,139,222,0.48)_0%,rgba(86,101,197,0.74)_100%)]",
     iconAccentClassName: "bg-[#f3b53f]/14 text-[#f3b53f]",
     animationName: "heroFloatDown",
     animationDuration: "8.4s",
@@ -50,7 +58,9 @@ const heroFloatingCards = [
     title: "Relatórios",
     value: "Indicadores ao vivo",
     icon: BarChart3,
-    positionClassName: "left-1/2 bottom-10 w-[220px] -translate-x-1/2 sm:bottom-8 sm:w-[250px]",
+    positionClassName: "left-36 bottom-8 w-[248px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(119,137,217,0.44)_0%,rgba(85,98,190,0.72)_100%)]",
     iconAccentClassName: "bg-white/12 text-slate-200",
     animationName: "heroFloatUp",
     animationDuration: "7.6s",
@@ -217,7 +227,9 @@ const mobilityFloatingCards = [
     title: "Comercial",
     value: "3 retornos pendentes",
     icon: FileText,
-    positionClassName: "left-4 top-16 w-[250px]",
+    positionClassName: "left-0 top-6 w-[250px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(81,101,220,0.72)_0%,rgba(50,65,167,0.84)_100%)]",
     iconAccentClassName: "bg-[#8b7dff]/14 text-[#8b7dff]",
     animationName: "heroFloatUp",
     animationDuration: "7.4s",
@@ -227,17 +239,33 @@ const mobilityFloatingCards = [
     title: "Produção",
     value: "Pedido 184 em execução",
     icon: Wrench,
-    positionClassName: "right-4 top-28 w-[270px]",
+    positionClassName: "right-0 top-16 w-[268px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(80,99,221,0.72)_0%,rgba(48,63,165,0.84)_100%)]",
     iconAccentClassName: "bg-[#22d3a6]/14 text-[#22d3a6]",
     animationName: "heroFloatDown",
     animationDuration: "8s",
     animationDelay: "0.7s",
   },
   {
+    title: "Estoque",
+    value: "Materiais no radar",
+    icon: Package,
+    positionClassName: "left-12 bottom-10 w-[238px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(171,198,255,0.82)_0%,rgba(107,146,248,0.9)_100%)]",
+    iconAccentClassName: "bg-[#8b7dff]/14 text-[#8b7dff]",
+    animationName: "heroFloatDown",
+    animationDuration: "7.6s",
+    animationDelay: "0.4s",
+  },
+  {
     title: "Financeiro",
     value: "Recebimentos do dia",
     icon: Wallet,
-    positionClassName: "left-1/2 bottom-14 w-[260px] -translate-x-1/2",
+    positionClassName: "right-2 bottom-2 w-[258px]",
+    cardClassName:
+      "bg-[linear-gradient(135deg,rgba(119,137,217,0.54)_0%,rgba(85,98,190,0.76)_100%)]",
     iconAccentClassName: "bg-[#f3b53f]/14 text-[#f3b53f]",
     animationName: "heroFloatUp",
     animationDuration: "7.8s",
@@ -344,51 +372,61 @@ function Home() {
             <div className="absolute left-8 top-8 h-32 w-32 rounded-full bg-[#19d88f]/20 blur-3xl" />
             <div className="absolute bottom-10 right-10 h-40 w-40 rounded-full bg-[#7c5cff]/20 blur-3xl" />
 
-            <div className="relative h-full min-h-[520px] rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(13,31,46,0.72)_0%,rgba(7,20,31,0.9)_100%)] shadow-[0_30px_80px_rgba(2,10,18,0.55)]">
-              <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
-
-              <div className="relative hidden h-full lg:block">
-                {heroFloatingCards.map((item) => (
-                  <div
-                    key={item.title}
-                    className={`absolute rounded-[1.6rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.positionClassName}`}
-                    style={{
-                      animationName: item.animationName,
-                      animationDuration: item.animationDuration,
-                      animationTimingFunction: "ease-in-out",
-                      animationIterationCount: "infinite",
-                      animationDelay: item.animationDelay,
-                      willChange: "transform",
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
-                        <item.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
-                        <p className="mt-2 text-[1.1rem] font-bold leading-tight text-white">{item.value}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            <div className="relative hidden min-h-[540px] lg:block">
+              <div className="absolute left-12 top-12 h-[260px] w-[260px] rounded-full bg-[#7c5cff]/20 blur-[110px]" />
+              <div className="absolute left-28 top-40 h-[240px] w-[240px] rounded-full bg-[#19d88f]/12 blur-[120px]" />
+              <div className="absolute left-16 top-20 h-[340px] w-[438px] -rotate-[8deg] rounded-[2.8rem] bg-[linear-gradient(135deg,rgba(79,100,233,0.22)_0%,rgba(13,30,52,0.08)_100%)] shadow-[0_40px_90px_rgba(2,10,18,0.44)]" />
+              <div className="absolute left-20 top-24 h-[332px] w-[430px] -rotate-[7deg] overflow-hidden rounded-[2.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(170,187,255,0.16)_0%,rgba(92,116,243,0.12)_28%,rgba(7,20,31,0.56)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_35px_70px_rgba(3,10,18,0.42)]">
+                <div className="absolute inset-0 opacity-22 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:28px_28px]" />
+                <div className="absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.16),transparent)]" />
+                <div className="absolute left-8 top-10 h-4 w-48 rounded-full bg-white/16" />
+                <div className="absolute left-8 top-24 h-[210px] w-[315px] rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))]" />
+                <div className="absolute right-9 top-24 h-[170px] w-[68px] rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.03))]" />
               </div>
 
-              <div className="relative grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
-                {heroFloatingCards.map((item) => (
-                  <div key={item.title} className="rounded-[1.5rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
-                        <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
-                      </div>
+              {heroFloatingCards.map((item) => (
+                <div
+                  key={item.title}
+                  className={`absolute rounded-[1.6rem] border border-white/24 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.cardClassName} ${item.positionClassName}`}
+                  style={{
+                    animationName: item.animationName,
+                    animationDuration: item.animationDuration,
+                    animationTimingFunction: "ease-in-out",
+                    animationIterationCount: "infinite",
+                    animationDelay: item.animationDelay,
+                    willChange: "transform",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200/80">{item.title}</p>
+                      <p className="mt-2 text-[1.08rem] font-bold leading-tight text-white">{item.value}</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="relative grid gap-4 pt-4 sm:grid-cols-2 lg:hidden">
+              {heroFloatingCards.map((item) => (
+                <div
+                  key={item.title}
+                  className={`rounded-[1.5rem] border border-white/14 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl ${item.cardClassName}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
+                      <item.icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
+                      <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -541,12 +579,12 @@ function Home() {
               </div>
             </div>
 
-            <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
-              <div className="relative hidden h-full min-h-[340px] lg:block">
+            <div className="relative min-h-[360px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
+              <div className="relative mx-auto hidden h-full min-h-[308px] max-w-[560px] lg:block">
                 {mobilityFloatingCards.map((item) => (
                   <div
                     key={item.title}
-                    className={`absolute rounded-[1.6rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.positionClassName}`}
+                    className={`absolute rounded-[1.6rem] border border-white/20 px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.cardClassName} ${item.positionClassName}`}
                     style={{
                       animationName: item.animationName,
                       animationDuration: item.animationDuration,
@@ -569,9 +607,12 @@ function Home() {
                 ))}
               </div>
 
-              <div className="grid gap-4 pt-10 sm:grid-cols-2 lg:hidden">
+              <div className="grid gap-4 pt-6 sm:grid-cols-2 lg:hidden">
                 {mobilityFloatingCards.map((item) => (
-                  <div key={item.title} className="rounded-[1.5rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl">
+                  <div
+                    key={item.title}
+                    className={`rounded-[1.5rem] border border-white/16 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl ${item.cardClassName}`}
+                  >
                     <div className="flex items-center gap-3">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
                         <item.icon className="h-4 w-4" />
