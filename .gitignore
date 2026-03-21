@@ -13,6 +13,9 @@
 # runtime artifacts
 apps/api/logs
 apps/api/uploads
+/uploads
+scripts/__pycache__
+*.pyc
 
 # IDEs e editores
 .vscode
