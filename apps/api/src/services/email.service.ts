@@ -296,7 +296,7 @@ export class EmailService {
                     </td>
                   </tr>
                 </table>
-                <p style="margin:0 0 10px;font-size:14px;line-height:1.7;color:#475569;">Se o botao nao abrir, copie e cole este link no navegador:</p>
+                <p style="margin:0 0 10px;font-size:14px;line-height:1.7;color:#475569;">Se o botão não abrir, copie e cole este link no navegador:</p>
                 <p style="margin:0 0 28px;font-size:13px;line-height:1.8;word-break:break-word;color:${input.accentColor};">${escapeHtml(input.actionUrl)}</p>
                 <p style="margin:0 0 18px;font-size:13px;line-height:1.8;color:#64748b;">${safeSupport}</p>
               </td>
@@ -442,22 +442,22 @@ export class EmailService {
     const confirmationUrl = this.buildFrontendLink('/verify-email', input.token);
     const template = this.buildActionEmailTemplate({
       preview: 'Confirme seu cadastro para liberar o acesso completo ao MetalGest.',
-      kicker: 'Confirmacao de cadastro',
+      kicker: 'Confirmação de cadastro',
       title: 'Confirme seu cadastro',
-      greeting: `Ola, ${input.recipientName || 'cliente'}.`,
+      greeting: `Olá, ${input.recipientName || 'cliente'}.`,
       intro:
-        'Seu acesso ao MetalGest ja foi criado. Falta apenas validar o endereco de e-mail para liberar a entrada na plataforma e manter a conta protegida.',
-      actionLabel: 'Confirmar meu email',
+        'Seu acesso ao MetalGest já foi criado. Falta apenas validar o endereço de e-mail para liberar a entrada na plataforma e manter a conta protegida.',
+      actionLabel: 'Confirmar meu e-mail',
       actionUrl: confirmationUrl,
-      expiryText: 'Este link fica disponivel por 24 horas.',
+      expiryText: 'Este link fica disponível por 24 horas.',
       highlights: [
-        'Abra o link para confirmar que este endereco realmente pertence a sua empresa.',
-        'Depois da confirmacao, voce podera entrar normalmente pelo login da plataforma.',
-        'Se o prazo vencer, voce pode pedir um novo envio na tela de confirmacao.',
+        'Abra o link para confirmar que este endereço realmente pertence à sua empresa.',
+        'Depois da confirmação, você poderá entrar normalmente pelo login da plataforma.',
+        'Se o prazo vencer, você pode pedir um novo envio na tela de confirmação.',
       ],
       securityNote:
-        'Se voce nao criou esta conta, ignore esta mensagem. Nenhum acesso sera liberado sem a confirmacao do endereco.',
-      supportText: 'Se precisar, volte ao login ou a pagina de confirmacao para solicitar um novo link.',
+        'Se você não criou esta conta, ignore esta mensagem. Nenhum acesso será liberado sem a confirmação do endereço.',
+      supportText: 'Se precisar, volte ao login ou à página de confirmação para solicitar um novo link.',
       accentColor: '#b45309',
     });
 
@@ -479,23 +479,23 @@ export class EmailService {
     const resetUrl = this.buildFrontendLink('/reset-password', input.token);
     const template = this.buildActionEmailTemplate({
       preview: 'Recebemos um pedido para redefinir a senha da sua conta MetalGest.',
-      kicker: 'Recuperacao de senha',
-      title: 'Redefinicao de senha',
-      greeting: `Ola, ${input.recipientName || 'cliente'}.`,
+      kicker: 'Recuperação de senha',
+      title: 'Redefinição de senha',
+      greeting: `Olá, ${input.recipientName || 'cliente'}.`,
       intro:
-        'Recebemos um pedido para trocar a senha da sua conta. Use o botao abaixo para criar uma nova credencial e voltar a acessar a operacao com seguranca.',
+        'Recebemos um pedido para trocar a senha da sua conta. Use o botão abaixo para criar uma nova credencial e voltar a acessar a operação com segurança.',
       actionLabel: 'Criar nova senha',
       actionUrl: resetUrl,
-      expiryText: 'Este link expira em 1 hora por seguranca.',
+      expiryText: 'Este link expira em 1 hora por segurança.',
       highlights: [
-        'Abra o formulario de redefinicao e crie uma nova senha forte.',
+        'Abra o formulário de redefinição e crie uma nova senha forte.',
         'Depois da troca, volte ao login com a nova credencial.',
-        'Se nao foi voce, basta ignorar esta mensagem.',
+        'Se não foi você, basta ignorar esta mensagem.',
       ],
       securityNote:
-        'Sua senha atual continua valida ate que uma nova senha seja definida por este formulario.',
+        'Sua senha atual continua válida até que uma nova senha seja definida por este formulário.',
       supportText:
-        'Se o link perder a validade, solicite um novo envio na pagina de recuperacao de senha.',
+        'Se o link perder a validade, solicite um novo envio na página de recuperação de senha.',
       accentColor: '#0f766e',
     });
 

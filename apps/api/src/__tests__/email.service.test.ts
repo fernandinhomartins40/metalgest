@@ -116,8 +116,8 @@ describe('EmailService', () => {
     expect(requestBody.subject).toBe('Crie sua nova senha na MetalGest');
     expect(requestBody.html).toContain('https://metalgest.com.br/reset-password?token=reset-token');
     expect(requestBody.html).toContain('O que acontece agora');
-    expect(requestBody.html).toContain('Se o botao nao abrir');
-    expect(requestBody.text).toContain('- Abra o formulario de redefinicao e crie uma nova senha forte.');
+    expect(requestBody.html).toContain('Se o botão não abrir');
+    expect(requestBody.text).toContain('- Abra o formulário de redefinição e crie uma nova senha forte.');
   });
 
   it('raises a clear error when ULTRAZEND_API_KEY contains an AI agent key', async () => {

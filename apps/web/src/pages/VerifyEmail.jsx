@@ -52,7 +52,7 @@ function VerifyEmail() {
         setMessage(error.message)
         toast({
           variant: "destructive",
-          title: "Nao foi possivel confirmar",
+          title: "Não foi possível confirmar",
           description: error.message,
         })
       }
@@ -72,7 +72,7 @@ function VerifyEmail() {
       toast({
         variant: "destructive",
         title: "Informe o e-mail",
-        description: "Digite o e-mail da conta para reenviar a confirmacao.",
+        description: "Digite o e-mail da conta para reenviar a confirmação.",
       })
       return
     }
@@ -84,7 +84,7 @@ function VerifyEmail() {
       setStatus(result.alreadyVerified ? "success" : "idle")
       setMessage(result.message)
       toast({
-        title: result.alreadyVerified ? "E-mail ja confirmado" : "Link reenviado",
+        title: result.alreadyVerified ? "E-mail já confirmado" : "Link reenviado",
         description: result.message,
       })
     } catch (error) {
@@ -92,7 +92,7 @@ function VerifyEmail() {
       setMessage(error.message)
       toast({
         variant: "destructive",
-        title: "Nao foi possivel reenviar",
+        title: "Não foi possível reenviar",
         description: error.message,
       })
     } finally {
@@ -113,11 +113,11 @@ function VerifyEmail() {
         <CardHeader className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
           <CardTitle>Confirmar e-mail</CardTitle>
-          <CardDescription>Conclua a validacao do cadastro para liberar o acesso.</CardDescription>
+          <CardDescription>Conclua a validação do cadastro para liberar o acesso.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className={alertClassName}>
-            <AlertTitle>Status da confirmacao</AlertTitle>
+            <AlertTitle>Status da confirmação</AlertTitle>
             <AlertDescription>
               <span className={status === "verifying" ? "inline-flex items-center gap-2" : undefined}>
                 {status === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -143,13 +143,13 @@ function VerifyEmail() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoComplete="email"
-                  placeholder="voce@empresa.com.br"
+                  placeholder="você@empresa.com.br"
                   required
                 />
               </div>
 
               <Button type="submit" className="w-full" disabled={isResending}>
-                {isResending ? "Reenviando..." : "Reenviar confirmacao"}
+                {isResending ? "Reenviando..." : "Reenviar confirmação"}
               </Button>
             </form>
           )}

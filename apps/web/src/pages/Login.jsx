@@ -53,8 +53,8 @@ function Login() {
       await login(form.email, form.password, form.rememberMe)
 
       toast({
-        title: "Sessao iniciada",
-        description: "Autenticacao concluida com sucesso.",
+        title: "Sessão iniciada",
+        description: "Autenticação concluída com sucesso.",
       })
 
       const redirectTo = location.state?.from?.pathname || "/app"
@@ -97,7 +97,7 @@ function Login() {
                 value={form.email}
                 onChange={handleChange}
                 autoComplete="email"
-                placeholder="voce@empresa.com.br"
+                placeholder="você@empresa.com.br"
                 required
               />
             </div>

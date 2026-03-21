@@ -142,7 +142,7 @@ function DRE() {
       toast({
         variant: "destructive",
         title: "Erro ao exportar",
-        description: "Nao foi possivel exportar o relatorio.",
+        description: "Não foi possível exportar o relatório.",
       })
     }
   }

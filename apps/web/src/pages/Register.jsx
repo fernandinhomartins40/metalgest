@@ -17,7 +17,7 @@ const strengthScale = [
   },
   {
     limit: 0.8,
-    label: "Media",
+    label: "Média",
     textClassName: "text-amber-600",
   },
   {
@@ -61,8 +61,8 @@ function Register() {
     if (!passwordValidation.isValid) {
       toast({
         variant: "destructive",
-        title: "Senha fora do padrao",
-        description: "Use ao menos 8 caracteres com maiuscula, minuscula, numero e simbolo.",
+        title: "Senha fora do padrão",
+        description: "Use ao menos 8 caracteres com maiúscula, minúscula, número e símbolo.",
       })
       return
     }
@@ -70,8 +70,8 @@ function Register() {
     if (form.password !== form.confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Confirmacao invalida",
-        description: "As senhas informadas nao conferem.",
+        title: "Confirmação inválida",
+        description: "As senhas informadas não conferem.",
       })
       return
     }
@@ -92,7 +92,7 @@ function Register() {
 
       toast({
         title: "Conta criada",
-        description: "Sua conta foi registrada e a sessao ja foi iniciada.",
+        description: "Sua conta foi registrada e a sessão já foi iniciada.",
       })
       navigate("/app", { replace: true })
     } catch (error) {
@@ -108,10 +108,10 @@ function Register() {
 
   const checks = [
     ["8 caracteres", passwordValidation.requirements.hasMinLength],
-    ["Letra maiuscula", passwordValidation.requirements.hasUpperCase],
-    ["Letra minuscula", passwordValidation.requirements.hasLowerCase],
-    ["Numero", passwordValidation.requirements.hasNumber],
-    ["Simbolo", passwordValidation.requirements.hasSymbol],
+    ["Letra maiúscula", passwordValidation.requirements.hasUpperCase],
+    ["Letra minúscula", passwordValidation.requirements.hasLowerCase],
+    ["Número", passwordValidation.requirements.hasNumber],
+    ["Símbolo", passwordValidation.requirements.hasSymbol],
   ]
 
   return (
@@ -125,15 +125,15 @@ function Register() {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Alert>
-              <AlertTitle>Confirmacao de e-mail</AlertTitle>
+              <AlertTitle>Confirmação de e-mail</AlertTitle>
               <AlertDescription>
-                Depois do cadastro, o sistema pode solicitar a confirmacao do e-mail antes do login.
+                Depois do cadastro, o sistema pode solicitar a confirmação do e-mail antes do login.
               </AlertDescription>
             </Alert>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700" htmlFor="name">
-                Nome do responsavel
+                Nome do responsável
               </label>
               <Input
                 id="name"
@@ -157,7 +157,7 @@ function Register() {
                 value={form.email}
                 onChange={handleChange}
                 autoComplete="email"
-                placeholder="voce@empresa.com.br"
+                placeholder="você@empresa.com.br"
                 required
               />
             </div>
@@ -182,14 +182,14 @@ function Register() {
               autoComplete="new-password"
               error={
                 form.confirmPassword && form.confirmPassword !== form.password
-                  ? "As senhas informadas nao conferem."
+                  ? "As senhas informadas não conferem."
                   : ""
               }
             />
 
             <div className="rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-700">Forca da senha</p>
+                <p className="text-sm font-medium text-slate-700">Força da senha</p>
                 <span className={`text-sm font-medium ${form.password ? passwordStrength.textClassName : "text-slate-500"}`}>
                   {form.password ? passwordStrength.label : "Aguardando"}
                 </span>

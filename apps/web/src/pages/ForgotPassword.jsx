@@ -27,13 +27,13 @@ function ForgotPassword() {
       })
       toast({
         variant: result.recoveryAvailable ? "default" : "destructive",
-        title: result.recoveryAvailable ? "Confira seu e-mail" : "Recuperacao indisponivel",
+        title: result.recoveryAvailable ? "Confira seu e-mail" : "Recuperação indisponível",
         description: result.message,
       })
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Nao foi possivel enviar",
+        title: "Não foi possível enviar",
         description: error.message,
       })
     } finally {
@@ -52,7 +52,7 @@ function ForgotPassword() {
         <CardHeader className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
           <CardTitle>Recuperar acesso</CardTitle>
-          <CardDescription>Informe o e-mail da conta para receber o link de redefinicao.</CardDescription>
+          <CardDescription>Informe o e-mail da conta para receber o link de redefinição.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -67,7 +67,7 @@ function ForgotPassword() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
-                placeholder="voce@empresa.com.br"
+                placeholder="você@empresa.com.br"
                 required
               />
             </div>
@@ -75,7 +75,7 @@ function ForgotPassword() {
             {feedback ? (
               <Alert className={feedbackClassName}>
                 <AlertTitle>
-                  {feedback.tone === "success" ? "Pedido registrado" : "Recuperacao indisponivel"}
+                  {feedback.tone === "success" ? "Pedido registrado" : "Recuperação indisponível"}
                 </AlertTitle>
                 <AlertDescription>{feedback.message}</AlertDescription>
               </Alert>
@@ -83,13 +83,13 @@ function ForgotPassword() {
               <Alert>
                 <AlertTitle>Como funciona</AlertTitle>
                 <AlertDescription>
-                  Se o e-mail existir, voce recebera um link para criar uma nova senha.
+                  Se o e-mail existir, você receberá um link para criar uma nova senha.
                 </AlertDescription>
               </Alert>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Enviando..." : "Enviar link de recuperacao"}
+              {isSubmitting ? "Enviando..." : "Enviar link de recuperação"}
             </Button>
 
             <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
@@ -97,7 +97,7 @@ function ForgotPassword() {
             </Button>
 
             <Button type="button" variant="link" className="w-full" onClick={() => navigate("/verify-email")}>
-              Reenviar confirmacao de cadastro
+              Reenviar confirmação de cadastro
             </Button>
           </form>
         </CardContent>
