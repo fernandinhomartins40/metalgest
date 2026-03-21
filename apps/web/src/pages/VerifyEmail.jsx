@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import AuthPageFrame from "../components/auth/AuthPageFrame"
 import { Button } from "../components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
 import auth from "../services/auth"
@@ -102,64 +102,75 @@ function VerifyEmail() {
 
   const alertClassName =
     status === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      ? "border-emerald-200 bg-emerald-50/95 text-emerald-800"
       : status === "error"
-        ? "border-red-200 bg-red-50 text-red-800"
-        : "border-slate-200"
+        ? "border-red-200 bg-red-50/95 text-red-800"
+        : "border-[#dce6ef] bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)]"
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Confirmar e-mail</CardTitle>
-          <CardDescription>Conclua a validação do cadastro para liberar o acesso.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert className={alertClassName}>
-            <AlertTitle>Status da confirmação</AlertTitle>
-            <AlertDescription>
-              <span className={status === "verifying" ? "inline-flex items-center gap-2" : undefined}>
-                {status === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {message}
-              </span>
-            </AlertDescription>
-          </Alert>
+    <AuthPageFrame
+      introTitle="Confirme seu cadastro"
+      introDescription="Ative o acesso pelo link enviado para o e-mail da conta."
+      eyebrow="Validação"
+      title="Confirmar e-mail"
+      description="Conclua a validação do cadastro para liberar o acesso."
+    >
+      <div className="space-y-4">
+        <Alert className={alertClassName}>
+          <AlertTitle>Status da confirmação</AlertTitle>
+          <AlertDescription>
+            <span className={status === "verifying" ? "inline-flex items-center gap-2" : undefined}>
+              {status === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {message}
+            </span>
+          </AlertDescription>
+        </Alert>
 
-          {status === "success" ? (
-            <Button className="w-full" onClick={() => navigate("/login")}>
-              Ir para o login
-            </Button>
-          ) : (
-            <form className="space-y-4" onSubmit={handleResend}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                  E-mail da conta
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  placeholder="você@empresa.com.br"
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isResending}>
-                {isResending ? "Reenviando..." : "Reenviar confirmação"}
-              </Button>
-            </form>
-          )}
-
-          <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
-            Voltar ao login
+        {status === "success" ? (
+          <Button
+            className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+            onClick={() => navigate("/login")}
+          >
+            Ir para o login
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-4" onSubmit={handleResend}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="email">
+                E-mail da conta
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                placeholder="você@empresa.com.br"
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+              disabled={isResending}
+            >
+              {isResending ? "Reenviando..." : "Reenviar confirmação"}
+            </Button>
+          </form>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-full rounded-xl border-[#d6dfeb]"
+          onClick={() => navigate("/login")}
+        >
+          Voltar ao login
+        </Button>
+      </div>
+    </AuthPageFrame>
   )
 }
 

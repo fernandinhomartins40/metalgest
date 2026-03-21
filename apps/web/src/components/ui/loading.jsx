@@ -13,10 +13,10 @@ export function Loading({ className, size = "default", fullScreen = false }) {
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#071826]/35 backdrop-blur-sm">
+        <div className="auth-page-card rounded-[1.35rem] p-6 flex flex-col items-center gap-4">
           <Loader2 className={cn("animate-spin", sizeClasses[size], className)} />
-          <p className="text-sm text-gray-600">Carregando...</p>
+          <p className="text-sm text-slate-600">Carregando...</p>
         </div>
       </div>
     )

@@ -5,7 +5,7 @@ import Navbar from "./Navbar"
 
 function Layout() {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="panel-shell flex min-h-screen">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Navbar />

@@ -35,10 +35,11 @@ function Sidebar() {
   const filteredNavigation = navigation.filter((item) => accessibleModules.includes(item.module))
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
-      <div className="border-b border-gray-200 px-6 py-6">
-        <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Operação</p>
-        <h2 className="mt-2 text-2xl font-semibold text-gray-900">MetalGest</h2>
+    <aside className="hidden w-72 shrink-0 border-r border-[#143047] bg-[linear-gradient(180deg,#071826_0%,#0b2235_100%)] text-white lg:flex lg:flex-col">
+      <div className="border-b border-white/10 px-6 py-6">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#8df3c8]">Operação</p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">MetalGest</h2>
+        <p className="mt-2 text-sm text-slate-300">Comercial, produção e financeiro no mesmo fluxo.</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-6">
@@ -50,10 +51,10 @@ function Sidebar() {
                 end={item.to === "/app"}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-[linear-gradient(135deg,#19d88f_0%,#14c882_100%)] text-[#072235] shadow-[0_16px_30px_rgba(25,216,143,0.18)]"
+                      : "text-slate-300 hover:bg-white/6 hover:text-white"
                   )
                 }
               >
@@ -65,9 +66,9 @@ function Sidebar() {
         </ul>
       </nav>
 
-      <div className="border-t border-gray-200 px-6 py-4">
-        <p className="text-sm font-medium text-gray-900">{user?.name || "Usuário"}</p>
-        <p className="text-xs uppercase tracking-[0.15em] text-gray-500">{user?.role || "USER"}</p>
+      <div className="border-t border-white/10 px-6 py-4">
+        <p className="text-sm font-medium text-white">{user?.name || "Usuário"}</p>
+        <p className="text-xs uppercase tracking-[0.15em] text-slate-400">{user?.role || "USER"}</p>
       </div>
     </aside>
   )

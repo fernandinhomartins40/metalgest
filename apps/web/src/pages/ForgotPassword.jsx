@@ -1,8 +1,8 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import AuthPageFrame from "../components/auth/AuthPageFrame"
 import { Button } from "../components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
 import auth from "../services/auth"
@@ -43,66 +43,77 @@ function ForgotPassword() {
 
   const feedbackClassName =
     feedback?.tone === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : "border-amber-200 bg-amber-50 text-amber-800"
+      ? "border-emerald-200 bg-emerald-50/95 text-emerald-800"
+      : "border-amber-200 bg-amber-50/95 text-amber-800"
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Recuperar acesso</CardTitle>
-          <CardDescription>Informe o e-mail da conta para receber o link de redefinição.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                E-mail da conta
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-                placeholder="você@empresa.com.br"
-                required
-              />
-            </div>
+    <AuthPageFrame
+      introTitle="Recupere seu acesso"
+      introDescription="Receba o link de redefinição no e-mail da conta."
+      eyebrow="Recuperação"
+      title="Recuperar senha"
+      description="Informe o e-mail cadastrado para gerar um novo acesso."
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="email">
+            E-mail da conta
+          </label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            placeholder="você@empresa.com.br"
+            required
+          />
+        </div>
 
-            {feedback ? (
-              <Alert className={feedbackClassName}>
-                <AlertTitle>
-                  {feedback.tone === "success" ? "Pedido registrado" : "Recuperação indisponível"}
-                </AlertTitle>
-                <AlertDescription>{feedback.message}</AlertDescription>
-              </Alert>
-            ) : (
-              <Alert>
-                <AlertTitle>Como funciona</AlertTitle>
-                <AlertDescription>
-                  Se o e-mail existir, você receberá um link para criar uma nova senha.
-                </AlertDescription>
-              </Alert>
-            )}
+        {feedback ? (
+          <Alert className={feedbackClassName}>
+            <AlertTitle>
+              {feedback.tone === "success" ? "Pedido registrado" : "Recuperação indisponível"}
+            </AlertTitle>
+            <AlertDescription>{feedback.message}</AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-[#dce6ef] bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)]">
+            <AlertTitle>Como funciona</AlertTitle>
+            <AlertDescription>
+              Se o e-mail existir, enviaremos um link para criar uma nova senha.
+            </AlertDescription>
+          </Alert>
+        )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Enviando..." : "Enviar link de recuperação"}
-            </Button>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Enviando..." : "Enviar link de recuperação"}
+        </Button>
 
-            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
-              Voltar ao login
-            </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-full rounded-xl border-[#d6dfeb]"
+          onClick={() => navigate("/login")}
+        >
+          Voltar ao login
+        </Button>
 
-            <Button type="button" variant="link" className="w-full" onClick={() => navigate("/verify-email")}>
-              Reenviar confirmação de cadastro
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <Button
+          type="button"
+          variant="link"
+          className="w-full text-[#2f2960]"
+          onClick={() => navigate("/verify-email")}
+        >
+          Reenviar confirmação de cadastro
+        </Button>
+      </form>
+    </AuthPageFrame>
   )
 }
 

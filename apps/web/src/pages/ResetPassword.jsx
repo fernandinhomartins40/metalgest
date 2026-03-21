@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import AuthPageFrame from "../components/auth/AuthPageFrame"
 import PasswordInput from "../components/auth/PasswordInput"
 import { Button } from "../components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useToast } from "../components/ui/use-toast"
 import auth from "../services/auth"
 
@@ -105,91 +105,108 @@ function ResetPassword() {
   ]
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>{isCompleted ? "Senha atualizada" : "Criar nova senha"}</CardTitle>
-          <CardDescription>
-            {isCompleted
-              ? "A conta já pode ser acessada com a nova senha."
-              : "Defina uma nova senha para concluir a recuperação."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isCompleted ? (
-            <div className="space-y-4">
-              <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800">
-                <AlertTitle>Tudo certo</AlertTitle>
-                <AlertDescription>Sua senha foi alterada com sucesso.</AlertDescription>
-              </Alert>
+    <AuthPageFrame
+      introTitle={isCompleted ? "Senha atualizada" : "Defina uma nova senha"}
+      introDescription={
+        isCompleted
+          ? "Sua conta já pode ser acessada novamente."
+          : "Conclua a recuperação com uma senha forte e segura."
+      }
+      eyebrow="Redefinição"
+      title={isCompleted ? "Senha atualizada" : "Criar nova senha"}
+      description={
+        isCompleted
+          ? "A conta já pode ser acessada com a nova senha."
+          : "Defina uma nova senha para concluir a recuperação."
+      }
+    >
+      {isCompleted ? (
+        <div className="space-y-4">
+          <Alert className="border-emerald-200 bg-emerald-50/95 text-emerald-800">
+            <AlertTitle>Tudo certo</AlertTitle>
+            <AlertDescription>Sua senha foi alterada com sucesso.</AlertDescription>
+          </Alert>
 
-              <Button className="w-full" onClick={() => navigate("/login")}>
-                Ir para o login
-              </Button>
+          <Button
+            className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+            onClick={() => navigate("/login")}
+          >
+            Ir para o login
+          </Button>
+        </div>
+      ) : (
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {!token ? (
+            <Alert variant="destructive">
+              <AlertTitle>Link inválido</AlertTitle>
+              <AlertDescription>Solicite um novo e-mail para continuar.</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Nova senha"
+            value={form.password}
+            onChange={handleChange}
+            required
+            autoComplete="new-password"
+          />
+
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            label="Confirmar nova senha"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            required
+            autoComplete="new-password"
+            error={
+              form.confirmPassword && form.confirmPassword !== form.password
+                ? "As senhas informadas não conferem."
+                : ""
+            }
+          />
+
+          <div className="rounded-2xl border border-[#dce6ef] bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-700">Força da senha</p>
+              <span
+                className={`text-sm font-medium ${
+                  form.password ? passwordStrength.textClassName : "text-slate-500"
+                }`}
+              >
+                {form.password ? passwordStrength.label : "Aguardando"}
+              </span>
             </div>
-          ) : (
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {!token ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Link inválido</AlertTitle>
-                  <AlertDescription>Solicite um novo e-mail para continuar.</AlertDescription>
-                </Alert>
-              ) : null}
+            <ul className="mt-3 grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
+              {checks.map(([label, passed]) => (
+                <li key={label}>
+                  {passed ? "OK" : "Pendente"} - {label}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-              <PasswordInput
-                id="password"
-                name="password"
-                label="Nova senha"
-                value={form.password}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-              />
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+            disabled={isSubmitting || !token}
+          >
+            {isSubmitting ? "Salvando..." : "Atualizar senha"}
+          </Button>
 
-              <PasswordInput
-                id="confirmPassword"
-                name="confirmPassword"
-                label="Confirmar nova senha"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-                error={
-                  form.confirmPassword && form.confirmPassword !== form.password
-                    ? "As senhas informadas não conferem."
-                    : ""
-                }
-              />
-
-              <div className="rounded-md border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-700">Força da senha</p>
-                  <span className={`text-sm font-medium ${form.password ? passwordStrength.textClassName : "text-slate-500"}`}>
-                    {form.password ? passwordStrength.label : "Aguardando"}
-                  </span>
-                </div>
-                <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                  {checks.map(([label, passed]) => (
-                    <li key={label}>
-                      {passed ? "OK" : "Pendente"} - {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isSubmitting || !token}>
-                {isSubmitting ? "Salvando..." : "Atualizar senha"}
-              </Button>
-
-              <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/forgot-password")}>
-                Pedir novo link
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-xl border-[#d6dfeb]"
+            onClick={() => navigate("/forgot-password")}
+          >
+            Pedir novo link
+          </Button>
+        </form>
+      )}
+    </AuthPageFrame>
   )
 }
 

@@ -5,39 +5,13 @@ import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 
-const heroStats = [
-  {
-    value: "Tudo junto",
-    label: "Comercial, produção, estoque e financeiro",
-  },
-  {
-    value: "Acesso web",
-    label: "Sistema disponível em qualquer lugar",
-  },
-  {
-    value: "Fluxo único",
-    label: "Do pedido ao recebimento",
-  },
-  {
-    value: "Tempo real",
-    label: "Prioridades e gargalos no radar",
-  },
-]
-
-const quickSignals = [
-  "Orçamentos",
-  "Produção",
-  "Estoque",
-  "Financeiro",
-]
-
 const heroFloatingCards = [
   {
     title: "Comercial",
     value: "Orçamentos no radar",
     icon: FileText,
     positionClassName: "left-4 top-8 w-[220px] sm:left-10 sm:top-10 sm:w-[250px]",
-    accentClassName: "border-[#19d88f]/30 bg-[#11372f]/88 text-[#8df3c8]",
+    iconAccentClassName: "bg-[#22d3a6]/14 text-[#22d3a6]",
     animationName: "heroFloatUp",
     animationDuration: "7.2s",
     animationDelay: "0s",
@@ -47,7 +21,7 @@ const heroFloatingCards = [
     value: "Materiais disponíveis",
     icon: Package,
     positionClassName: "right-4 top-24 w-[220px] sm:right-8 sm:top-16 sm:w-[250px]",
-    accentClassName: "border-[#7c5cff]/30 bg-[#2f2960]/88 text-[#c4b7ff]",
+    iconAccentClassName: "bg-[#8b7dff]/14 text-[#8b7dff]",
     animationName: "heroFloatDown",
     animationDuration: "8s",
     animationDelay: "0.6s",
@@ -57,7 +31,7 @@ const heroFloatingCards = [
     value: "Pedido 184 em execução",
     icon: Wrench,
     positionClassName: "left-8 top-52 w-[240px] sm:left-16 sm:top-56 sm:w-[270px]",
-    accentClassName: "border-[#4f7cff]/25 bg-[#23426a]/88 text-[#a5c6ff]",
+    iconAccentClassName: "bg-[#90b3ff]/14 text-[#90b3ff]",
     animationName: "heroFloatUp",
     animationDuration: "7.8s",
     animationDelay: "1.2s",
@@ -67,7 +41,7 @@ const heroFloatingCards = [
     value: "Recebimentos do dia",
     icon: Wallet,
     positionClassName: "right-5 top-[19rem] w-[220px] sm:right-12 sm:top-[19.5rem] sm:w-[250px]",
-    accentClassName: "border-[#f3b53f]/25 bg-[#3a3018]/88 text-[#ffd98a]",
+    iconAccentClassName: "bg-[#f3b53f]/14 text-[#f3b53f]",
     animationName: "heroFloatDown",
     animationDuration: "8.4s",
     animationDelay: "0.9s",
@@ -77,7 +51,7 @@ const heroFloatingCards = [
     value: "Indicadores ao vivo",
     icon: BarChart3,
     positionClassName: "left-1/2 bottom-10 w-[220px] -translate-x-1/2 sm:bottom-8 sm:w-[250px]",
-    accentClassName: "border-white/15 bg-white/10 text-slate-200",
+    iconAccentClassName: "bg-white/12 text-slate-200",
     animationName: "heroFloatUp",
     animationDuration: "7.6s",
     animationDelay: "1.5s",
@@ -243,8 +217,8 @@ const mobilityFloatingCards = [
     title: "Comercial",
     value: "3 retornos pendentes",
     icon: FileText,
-    positionClassName: "left-0 top-14 w-[240px]",
-    accentClassName: "border-[#7c5cff]/28 bg-[#1c2f4c]/92 text-[#c4b7ff]",
+    positionClassName: "left-4 top-16 w-[250px]",
+    iconAccentClassName: "bg-[#8b7dff]/14 text-[#8b7dff]",
     animationName: "heroFloatUp",
     animationDuration: "7.4s",
     animationDelay: "0.2s",
@@ -253,8 +227,8 @@ const mobilityFloatingCards = [
     title: "Produção",
     value: "Pedido 184 em execução",
     icon: Wrench,
-    positionClassName: "right-2 top-28 w-[260px]",
-    accentClassName: "border-[#19d88f]/28 bg-[#163a34]/92 text-[#8df3c8]",
+    positionClassName: "right-4 top-28 w-[270px]",
+    iconAccentClassName: "bg-[#22d3a6]/14 text-[#22d3a6]",
     animationName: "heroFloatDown",
     animationDuration: "8s",
     animationDelay: "0.7s",
@@ -263,8 +237,8 @@ const mobilityFloatingCards = [
     title: "Financeiro",
     value: "Recebimentos do dia",
     icon: Wallet,
-    positionClassName: "left-8 bottom-12 w-[250px]",
-    accentClassName: "border-[#f3b53f]/24 bg-[#3a3018]/92 text-[#ffd98a]",
+    positionClassName: "left-1/2 bottom-14 w-[260px] -translate-x-1/2",
+    iconAccentClassName: "bg-[#f3b53f]/14 text-[#f3b53f]",
     animationName: "heroFloatUp",
     animationDuration: "7.8s",
     animationDelay: "1.1s",
@@ -364,33 +338,6 @@ function Home() {
               </Button>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              {quickSignals.map((item, index) => (
-                <div
-                  key={item}
-                  className={`rounded-full px-4 py-2 text-sm font-medium ${
-                    index % 3 === 0
-                      ? "bg-[#19d88f]/14 text-[#8df3c8]"
-                      : index % 3 === 1
-                        ? "bg-[#7c5cff]/14 text-[#b7a5ff]"
-                        : "bg-[#f3b53f]/14 text-[#ffd98a]"
-                  }`}
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {heroStats.map((item) => (
-                <Card key={item.value} className="border-white/10 bg-white/6 text-white shadow-none backdrop-blur">
-                  <CardContent className="p-5">
-                    <p className="text-lg font-bold text-white">{item.value}</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">{item.label}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
 
           <div className="relative">
@@ -399,14 +346,12 @@ function Home() {
 
             <div className="relative h-full min-h-[520px] rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(13,31,46,0.72)_0%,rgba(7,20,31,0.9)_100%)] shadow-[0_30px_80px_rgba(2,10,18,0.55)]">
               <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:28px_28px]" />
-              <div className="absolute left-[14%] top-[18%] h-[250px] w-[72%] rotate-[-8deg] rounded-[2.4rem] border border-white/10 bg-[linear-gradient(180deg,rgba(123,113,255,0.22)_0%,rgba(39,59,146,0.14)_50%,rgba(11,24,42,0.42)_100%)] shadow-[0_30px_80px_rgba(7,12,22,0.45)]" />
-              <div className="absolute left-[18%] top-[24%] h-[190px] w-[64%] rotate-[-8deg] rounded-[2rem] bg-[linear-gradient(180deg,rgba(91,123,255,0.78)_0%,rgba(42,63,153,0.68)_100%)] opacity-85 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]" />
 
               <div className="relative hidden h-full lg:block">
                 {heroFloatingCards.map((item) => (
                   <div
                     key={item.title}
-                    className={`absolute rounded-[1.7rem] border px-5 py-4 shadow-[0_20px_40px_rgba(7,12,22,0.3)] backdrop-blur-md ${item.positionClassName} ${item.accentClassName}`}
+                    className={`absolute rounded-[1.6rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.positionClassName}`}
                     style={{
                       animationName: item.animationName,
                       animationDuration: item.animationDuration,
@@ -417,12 +362,12 @@ function Home() {
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
                         <item.icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
-                        <p className="mt-2 text-xl font-bold leading-tight text-white">{item.value}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
+                        <p className="mt-2 text-[1.1rem] font-bold leading-tight text-white">{item.value}</p>
                       </div>
                     </div>
                   </div>
@@ -431,13 +376,13 @@ function Home() {
 
               <div className="relative grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
                 {heroFloatingCards.map((item) => (
-                  <div key={item.title} className={`rounded-[1.5rem] border px-4 py-4 backdrop-blur-md ${item.accentClassName}`}>
+                  <div key={item.title} className="rounded-[1.5rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
                         <item.icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
                         <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
                       </div>
                     </div>
@@ -597,62 +542,11 @@ function Home() {
             </div>
 
             <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
-              <div className="absolute left-6 top-8 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-slate-200 backdrop-blur sm:left-8">
-                Painel da operação
-              </div>
-
               <div className="relative hidden h-full min-h-[340px] lg:block">
-                <div className="absolute left-1/2 top-1/2 w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,28,43,0.96)_0%,rgba(10,20,31,0.96)_100%)] p-5 shadow-[0_32px_80px_rgba(0,0,0,0.35)]">
-                  <div className="flex items-center justify-between rounded-[1.3rem] border border-white/8 bg-white/6 px-4 py-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Visão geral</p>
-                      <p className="mt-1 text-lg font-bold text-white">Operação em andamento</p>
-                    </div>
-                    <span className="rounded-full bg-[#19d88f]/18 px-3 py-1 text-xs font-semibold text-[#8df3c8]">Ao vivo</span>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {[
-                      ["Pedidos", "18 ativos"],
-                      ["Estoque", "2 itens críticos"],
-                      ["Financeiro", "7 recebimentos"],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-[1.2rem] border border-white/8 bg-white/6 px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{label}</p>
-                        <p className="mt-2 text-lg font-bold text-white">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 rounded-[1.3rem] border border-white/8 bg-white/6 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white">Fluxo do dia</p>
-                      <p className="text-xs font-medium text-slate-400">Atualizado agora</p>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {[
-                        ["Comercial", "78%", "bg-[#7c5cff]"],
-                        ["Produção", "64%", "bg-[#19d88f]"],
-                        ["Financeiro", "52%", "bg-[#f3b53f]"],
-                      ].map(([label, value, color]) => (
-                        <div key={label}>
-                          <div className="flex items-center justify-between text-xs text-slate-300">
-                            <span>{label}</span>
-                            <span>{value}</span>
-                          </div>
-                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                            <div className={`h-full rounded-full ${color}`} style={{ width: value }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 {mobilityFloatingCards.map((item) => (
                   <div
                     key={item.title}
-                    className={`absolute rounded-[1.6rem] border px-5 py-4 shadow-[0_20px_40px_rgba(7,12,22,0.24)] backdrop-blur-md ${item.positionClassName} ${item.accentClassName}`}
+                    className={`absolute rounded-[1.6rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.32)] backdrop-blur-xl ${item.positionClassName}`}
                     style={{
                       animationName: item.animationName,
                       animationDuration: item.animationDuration,
@@ -663,27 +557,27 @@ function Home() {
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
                         <item.icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
-                        <p className="mt-2 text-lg font-bold leading-6 text-white">{item.value}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
+                        <p className="mt-2 text-[1.1rem] font-bold leading-tight text-white">{item.value}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="grid gap-4 pt-16 sm:grid-cols-2 lg:hidden">
+              <div className="grid gap-4 pt-10 sm:grid-cols-2 lg:hidden">
                 {mobilityFloatingCards.map((item) => (
-                  <div key={item.title} className={`rounded-[1.5rem] border px-4 py-4 backdrop-blur-md ${item.accentClassName}`}>
+                  <div key={item.title} className="rounded-[1.5rem] border border-white/14 bg-[linear-gradient(135deg,rgba(98,111,237,0.38)_0%,rgba(55,70,170,0.48)_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_44px_rgba(7,12,22,0.24)] backdrop-blur-xl">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.iconAccentClassName}`}>
                         <item.icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]">{item.title}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-300/80">{item.title}</p>
                         <p className="mt-2 text-base font-bold leading-6 text-white">{item.value}</p>
                       </div>
                     </div>

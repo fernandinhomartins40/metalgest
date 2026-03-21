@@ -5,25 +5,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 210 43% 97%;
+    --foreground: 212 49% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 212 49% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 262 73% 41%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 32 99% 47%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 212 49% 14%;
+    --primary: 159 79% 47%;
+    --primary-foreground: 210 49% 14%;
+    --secondary: 40 89% 60%;
+    --secondary-foreground: 212 49% 14%;
+    --muted: 214 36% 95%;
+    --muted-foreground: 215 19% 42%;
+    --accent: 251 100% 97%;
+    --accent-foreground: 212 49% 14%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 73% 41%;
+    --border: 214 31% 86%;
+    --input: 214 31% 86%;
+    --ring: 159 79% 47%;
     --radius: 0.75rem;
   }
 }
@@ -35,7 +35,51 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: radial-gradient(circle at top, rgba(124, 92, 255, 0.08), transparent 28%), linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%);
   }
+}
+
+.auth-page-shell {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #06121d 0%, #0b2235 58%, #07111a 100%);
+}
+
+.auth-page-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(25, 216, 143, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(124, 92, 255, 0.16), transparent 24%),
+    radial-gradient(circle at bottom center, rgba(243, 181, 63, 0.12), transparent 26%);
+  pointer-events: none;
+}
+
+.auth-page-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 38px 38px;
+  pointer-events: none;
+}
+
+.auth-page-card {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 28px 70px rgba(2, 10, 18, 0.32);
+}
+
+.panel-shell {
+  background:
+    radial-gradient(circle at top, rgba(124, 92, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, #f5f8fb 0%, #edf3f8 100%);
 }
 
 .scrollbar-hide::-webkit-scrollbar {

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import AuthPageFrame from "../components/auth/AuthPageFrame"
 import PasswordInput from "../components/auth/PasswordInput"
 import { Button } from "../components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input"
 import { useToast } from "../components/ui/use-toast"
 import { useAuth } from "../providers/AuthProvider"
@@ -115,105 +115,116 @@ function Register() {
   ]
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <Card className="w-full max-w-lg">
-        <CardHeader className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">MetalGest</p>
-          <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Cadastre o primeiro acesso da empresa.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <Alert>
-              <AlertTitle>Confirmação de e-mail</AlertTitle>
-              <AlertDescription>
-                Depois do cadastro, o sistema pode solicitar a confirmação do e-mail antes do login.
-              </AlertDescription>
-            </Alert>
+    <AuthPageFrame
+      maxWidth="max-w-lg"
+      introTitle="Crie o primeiro acesso"
+      introDescription="Cadastre o responsável e ative a operação da empresa em um só lugar."
+      eyebrow="Cadastro"
+      title="Criar conta"
+      description="Depois do cadastro, o sistema pode pedir a confirmação do e-mail antes do primeiro login."
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <Alert className="border-[#ddd8ff] bg-[linear-gradient(135deg,#f8f7ff_0%,#ffffff_100%)]">
+          <AlertTitle>Validação por e-mail</AlertTitle>
+          <AlertDescription>
+            Enviamos um link de confirmação para liberar o acesso com segurança.
+          </AlertDescription>
+        </Alert>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="name">
-                Nome do responsável
-              </label>
-              <Input
-                id="name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                autoComplete="name"
-                placeholder="Nome e sobrenome"
-                required
-              />
-            </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="name">
+            Nome do responsável
+          </label>
+          <Input
+            id="name"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            autoComplete="name"
+            placeholder="Nome e sobrenome"
+            required
+          />
+        </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                E-mail
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                autoComplete="email"
-                placeholder="você@empresa.com.br"
-                required
-              />
-            </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="email">
+            E-mail
+          </label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            autoComplete="email"
+            placeholder="você@empresa.com.br"
+            required
+          />
+        </div>
 
-            <PasswordInput
-              id="password"
-              name="password"
-              label="Senha"
-              value={form.password}
-              onChange={handleChange}
-              required
-              autoComplete="new-password"
-            />
+        <PasswordInput
+          id="password"
+          name="password"
+          label="Senha"
+          value={form.password}
+          onChange={handleChange}
+          required
+          autoComplete="new-password"
+        />
 
-            <PasswordInput
-              id="confirmPassword"
-              name="confirmPassword"
-              label="Confirmar senha"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              required
-              autoComplete="new-password"
-              error={
-                form.confirmPassword && form.confirmPassword !== form.password
-                  ? "As senhas informadas não conferem."
-                  : ""
-              }
-            />
+        <PasswordInput
+          id="confirmPassword"
+          name="confirmPassword"
+          label="Confirmar senha"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          required
+          autoComplete="new-password"
+          error={
+            form.confirmPassword && form.confirmPassword !== form.password
+              ? "As senhas informadas não conferem."
+              : ""
+          }
+        />
 
-            <div className="rounded-md border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-700">Força da senha</p>
-                <span className={`text-sm font-medium ${form.password ? passwordStrength.textClassName : "text-slate-500"}`}>
-                  {form.password ? passwordStrength.label : "Aguardando"}
-                </span>
-              </div>
-              <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                {checks.map(([label, passed]) => (
-                  <li key={label}>
-                    {passed ? "OK" : "Pendente"} - {label}
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <div className="rounded-2xl border border-[#dce6ef] bg-[linear-gradient(135deg,#f8fbff_0%,#eef6ff_100%)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-slate-700">Força da senha</p>
+            <span
+              className={`text-sm font-medium ${
+                form.password ? passwordStrength.textClassName : "text-slate-500"
+              }`}
+            >
+              {form.password ? passwordStrength.label : "Aguardando"}
+            </span>
+          </div>
+          <ul className="mt-3 grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
+            {checks.map(([label, passed]) => (
+              <li key={label}>
+                {passed ? "OK" : "Pendente"} - {label}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-            <Button type="submit" className="w-full" disabled={!canSubmit}>
-              {isSubmitting ? "Criando..." : "Criar conta"}
-            </Button>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl text-base font-semibold shadow-[0_16px_32px_rgba(25,216,143,0.22)]"
+          disabled={!canSubmit}
+        >
+          {isSubmitting ? "Criando..." : "Criar conta"}
+        </Button>
 
-            <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/login")}>
-              Voltar ao login
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-full rounded-xl border-[#d6dfeb]"
+          onClick={() => navigate("/login")}
+        >
+          Voltar ao login
+        </Button>
+      </form>
+    </AuthPageFrame>
   )
 }
 
